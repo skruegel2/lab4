@@ -95,7 +95,7 @@ default: Makefile.depend $(WORKDIR) $(OUTDIR) $(OUTPUT) $(OUTLIBS)
 # Builds dependencies for header files
 Makefile.depend: $(SRCS) $(ASMSRCS) $(FINALHDRS)
 	$(CC) $(INCDIR) -MM $(SRCS) $(ASMSRCS) | sed "s/^\(.*\):/$(WORKDIR)\/\1:/" > Makefile.depend
-	usleep 50000
+	sleep 0.05
 
 # Ensures directory for object files exists
 $(WORKDIR):

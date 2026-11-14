@@ -2,7 +2,7 @@
 #define __DISK_H__
 
 // Name of file which represents the "hard disk"
-//#define DISK_FILENAME "/tmp/ece695XX.img"
+#define DISK_FILENAME "/tmp/ece69527.img"
 
 // Number of bytes in one physical disk block
 #define DISK_BLOCKSIZE 256 
@@ -13,7 +13,7 @@ typedef struct disk_block {
 
 
 // Total size of this disk, in units of 256-byte blocks
-#define DISK_NUMBLOCKS 0x1  // Students: correct it
+#define DISK_NUMBLOCKS 262144  // Students: correct it
 
 #define DISK_SUCCESS 1
 #define DISK_FAIL -1

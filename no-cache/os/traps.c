@@ -17,7 +17,7 @@
 #include "dfs.h"
 #include "files.h"
 #include "ostests.h"
-
+#include "dfs_shared.h"
 
 //----------------------------------------------------------------------
 // GracefulExit tries to first close the file system, then exit

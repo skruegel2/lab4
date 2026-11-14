@@ -1,0 +1,12 @@
+dlxsim -D m -x os.dlx.obj -a -D m -u dyn_heap_test.dlx.obj > ./../log.txt
+
+dlxsim -x os.dlx.obj -a -u dyn_heap_test.dlx.obj > ./../log.txt
+
+dlxsim -x os.dlx.obj -a -u fdisk.dlx.obj > ./../log.txt
+
+dlxsim -x os.dlx.obj -a -u ostests.dlx.obj > ./../log.txt
+
+dlxsim -D F -x os.dlx.obj -a -D F -u fdisk.dlx.obj > ./../log.txt
+
+dlxsim -D F -x os.dlx.obj -a -D F -u ostests.dlx.obj > ./../log.txt
+

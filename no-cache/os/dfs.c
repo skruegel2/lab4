@@ -354,7 +354,15 @@ int DfsWriteBlock(uint32 blocknum, dfs_block *b){
   phys_block_start = blocknum * phys_block_ratio;
 
   // Chunk the DFS block data into physical blocks and write them to the disk
-  
+  for (i = 0; i < phys_block_ratio; i++) {
+    bcopy(b->data + (i * DiskBytesPerBlock()), phys_b.data, DiskBytesPerBlock());
+
+    if (DiskWriteBlock(phys_block_start +i, &phys_b) == DISK_FAIL) {
+      return DFS_FAIL;
+    }
+  }
+
+  return sb.fs_blocksize;
 }
 
 

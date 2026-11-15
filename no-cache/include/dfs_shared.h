@@ -17,10 +17,6 @@ typedef struct dfs_superblock {
 #define FILE_MAX_READWRITE_BYTES 4096
 #define DISK_BLOCKSIZE 256
 
-typedef struct disk_block {
-  char data[DISK_BLOCKSIZE]; // This assumes that DISK_BLOCKSIZE is a multiple of 4 (for byte alignment)
-} disk_block;
-
 typedef struct dfs_block {
   char data[DFS_BLOCKSIZE];
 } dfs_block;

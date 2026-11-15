@@ -43,7 +43,7 @@ void main (int argc, char *argv[])
   for(i = 0; i < 32; i++) {
     bzero(b.data, DFS_BLOCKSIZE);
     bcopy((char*)&inodes[i * (DFS_BLOCKSIZE / sizeof(dfs_inode))], b.data, DFS_BLOCKSIZE);
-    FdiskWriteBlock(33 + 1, &b); // DFS blocks 33 through 40    
+    FdiskWriteBlock(i + 1, &b); // DFS blocks 33 through 40    
   }
 
   // Setup fbv

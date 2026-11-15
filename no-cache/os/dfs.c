@@ -72,6 +72,7 @@ int DfsOpenFileSystem() {
   uint32 fbv_phys_blocks;
   char* inode_ptr;
   char* fbv_ptr;
+  dbprintf ('i', "Open dfs filesystem.\n");
 
   // Check that filesystem is not already open
   if (sb.valid == 1) {

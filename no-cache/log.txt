@@ -1,17 +1,29 @@
-Stack=0x1fffd4, pc starting at 0x12488
-Got 2 arguments.
-Available memory: 0x29858 -> 0x200000.
-Argument count is 2.
-Argument 0 is -u.
-Argument 1 is ostests.dlx.obj.
+setting debug flag i
+Stack=0x1fffc4, pc starting at 0x12530
+Got 4 arguments.
+Available memory: 0x2a870 -> 0x200000.
+Argument count is 4.
+Argument 0 is -D.
+Argument 1 is i.
+Argument 2 is -u.
+Argument 3 is ostests.dlx.obj.
+About to initialize queues.
+After initializing queues.
+After initializing memory.
+After initializing processes.
+After initializing synchronization tools.
+After initializing keyboard.
+VM Descriptor is 0
+Open dfs filesystem.
+After initializing dfs filesystem.
 Starting DFS driver tests
-Allocated DFS block 3
-Successfully wrote to DFS block 3.
-Successfully read and verified data from DFS block 3.
+Allocated DFS block 5
+Successfully wrote to DFS block 5.
+Successfully read and verified data from DFS block 5.
 All internal DFS block tests passed.
 No runnable processes - exiting!
 Exiting at program request.
-Instructions executed: 4146960
-Time simulated: 4.147 secs
-Real time elapsed: 0.113 secs
-Execution rate: 36.56M simulated instructions per real second.
+Instructions executed: 4196032
+Time simulated: 4.196 secs
+Real time elapsed: 0.115 secs
+Execution rate: 36.63M simulated instructions per real second.

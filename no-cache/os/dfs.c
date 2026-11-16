@@ -679,7 +679,7 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
     }
 
     table = (int*)b.data;
-    table[virtual_blocknum = 10] = new_block;
+    table[virtual_blocknum - 10] = new_block;
 
     if (DfsWriteBlock(inodes[handle].indirect, &b) == DFS_FAIL) {
       return DFS_FAIL;
@@ -789,7 +789,7 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
     table = (int*)b.data;
     block_result = table[virtual_blocknum - 10];
 
-    if (block_result = 0) {
+    if (block_result == 0) {
       return DFS_FAIL;
     }
     return block_result;

@@ -1,4 +1,4 @@
-Stack=0x1fffd4, pc starting at 0x13928
+Stack=0x1fffd4, pc starting at 0x13924
 Got 2 arguments.
 Available memory: 0x2b8b0 -> 0x200000.
 Argument count is 2.
@@ -10,7 +10,7 @@ Successfully wrote 12KB to inode 0.
 Test failed: expected filesize 12288, got 323068
 No runnable processes - exiting!
 Exiting at program request.
-Instructions executed: 4626863
-Time simulated: 4.627 secs
-Real time elapsed: 0.123 secs
-Execution rate: 37.66M simulated instructions per real second.
+Instructions executed: 4665717
+Time simulated: 4.666 secs
+Real time elapsed: 0.124 secs
+Execution rate: 37.63M simulated instructions per real second.

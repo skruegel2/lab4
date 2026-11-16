@@ -5,59 +5,54 @@
 #include "dfs.h"
 
 void RunOSTests() {
-  uint32 blocknum;
-  dfs_block write_b;
-  dfs_block read_b;
+  int inode_handle;
   int i;
+  char write_buffer[4096];  // Can write max 4096 bytes at a time
+  uint32 total_bytes_written = 0;
+  uint32 target_bytes = 12288;  // 12KB (requires 12 DFS blocks)
+  uint32 fbv_block_allocated;
 
-  printf("Starting DFS driver tests\n");
+  printf("Starting DFS Phase 3/4 Inode Tests\n");
 
-  // 1. Test allocation
-  blocknum = DfsAllocateBlock();
-  if (blocknum == DFS_FAIL) {
-    printf("Test failed: DfsAllocateBlock returned DFS_FAIL.\n");
+  // 1. Open a new inode
+  inode_handle = DfsInodeOpen("testfile.txt");
+  if (inode_handle == DFS_FAIL) {
+    printf("Test failed: DfsInodeOpen returned DFS_FAIL\n");
     return;
   }
-  printf("Allocated DFS block %d\n", blocknum);
-  // Expected: should be 41 or higher, since blocks 0-40 are reserved.
+  printf("Opened inode %d for 'testfile.txt'\n", inode_handle);
 
-  // 2. Test Write
-  // Fill the DFS block (1024 bytes) with a recognizable pattern.
-  for(i = 0; i < 1024; i++) {
-    write_b.data[i] = 'Z';
+  // Fill write buffer with 'A'
+  for(i = 0; i < 4096; i++) {
+    write_buffer[i] = 'A';
   }
 
-  if (DfsWriteBlock(blocknum, &write_b) == DFS_FAIL) {
-    printf("Test failed: DfsWriteBlock failed.\n");
-    return;
-  }
-  printf("Successfully wrote to DFS block %d.\n", blocknum);
-
-  // 3. Test read
-  // Clear the read buffer first so we are getting a fresh read
-  bzero(read_b.data, 1024);
-
-  if (DfsReadBlock(blocknum, &read_b) == DFS_FAIL)
-  {
-    printf("Test failed, DfsReadBlock failed.\n");
-    return;
-  }
-
-  // Verify the data matches
-  for(i = 0; i < 1024; i++) {
-    if (read_b.data[i] != 'Z') {
-      printf("Test failed. Data mismatch at byte %d. Expected 'Z' got '%c'\n", i, read_b.data[i]);
+  // 2. Write 12 KB to the file (Spanning blocks 0 through 11)
+  // Blocks 0-9 use direct addressing, blocks 10-11 require the single indirect table
+  while (total_bytes_written < target_bytes) {
+    if (DfsInodeWriteBytes(inode_handle, write_buffer, total_bytes_written, 4096) == DFS_FAIL) {
+      printf("Test failed: DfsInodeWriteBytes failed at offset %d\n", total_bytes_written);
       return;
     }
+    total_bytes_written += 4096;
   }
-  printf("Successfully read and verified data from DFS block %d.\n", blocknum);
+  printf("Successfully wrote 12KB to inode %d.\n", inode_handle);
 
-  // 4. Test deallocation
-  // if (DfsFreeBlock(blocknum) == DFS_FAIL) {
-  //   printf("Test failed: DfsFreeBlock failed\n");
-  //   return;
-  // }
-  // printf("Successfully freed DFS block %d.\n", blocknum);
-  printf("All internal DFS block tests passed.\n");
+  // 3. Verify the file size updated correctly
+  if (DfsInodeFilesize(inode_handle) != 12288) {
+    printf("Test failed: expected filesize 12288, got %d\n", DfsInodeFilesize(inode_handle));
+    return;
+  }
+
+  // 4. Verify Phase 3: single indirect translation
+  // Virtual block 11 should now translate to a valid DFS block number
+  fbv_block_allocated = DfsInodeTranslateVirtualToFilesys(inode_handle, 11);
+  if (fbv_block_allocated == DFS_FAIL || fbv_block_allocated == 0) {
+    printf("Test failed: Virtual block 11 did not translate correctly.\n");
+    return;
+  }
+
+  printf("Phase 3 verified: Virtual block 11 translates to DFS physical block %d\n", fbv_block_allocated);
+  printf("All phase 3/4 tests passed\n");
 }
 

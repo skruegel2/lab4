@@ -609,7 +609,12 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
 //-----------------------------------------------------------------
 
 int DfsInodeFilesize(uint32 handle) {
+  // Validate filesystem and inode handle
+  if (sb.valid == 0 || handle >= sb.num_inodes || inodes[handle].inuse == 0) {
+    return DFS_FAIL;
+  }
 
+  return inodes[handle].file_size;
 }
 
 

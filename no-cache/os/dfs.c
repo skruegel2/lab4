@@ -508,17 +508,19 @@ int DfsInodeDelete(uint32 handle) {
   // 4. Free the double indirect table blocks
   if (inodes[handle].double_indirect != 0) {
     // Read the top-level table to find and free the mid-level tables
-    table = (int*)b.data;
-    // The table holds DFS_BLOCKSIZE / 4 bytes = 256 entries
-    for(i = 0; i < 256; i++) {
-      if (table[i] != 0) {
-        DfsFreeBlock(table[i]);
+    if (DfsReadBlock(inodes[handle].double_indirect, &b) != DFS_FAIL) {
+      table = (int*)b.data;
+      // The table holds DFS_BLOCKSIZE / 4 bytes = 256 entries
+      for(i = 0; i < 256; i++) {
+        if (table[i] != 0) {
+          DfsFreeBlock(table[i]);
+        }
       }
     }
+    // Free the top-level table block
+    DfsFreeBlock(inodes[handle].double_indirect);
   }
-  // Free the top-level table block
-  DfsFreeBlock(inodes[handle].double_indirect);
-
+  
   // 5. Mark the inodes as free
   LockAcquire(dfs_lock);
   inodes[handle].inuse = 0;

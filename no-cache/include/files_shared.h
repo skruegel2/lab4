@@ -13,7 +13,7 @@
 
 typedef struct file_descriptor {
   int inuse;
-  uint32 inode_handle;
+  int inode_handle;
   int current_position;
 } file_descriptor;
 

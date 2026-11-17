@@ -4,10 +4,12 @@ Available memory: 0x2c9a4 -> 0x200000.
 Argument count is 2.
 Argument 0 is -u.
 Argument 1 is filetest.dlx.obj.
-Hello, world
+Starting Question 6 API test.
+DiskReadBlock: cannot read from block larger than filesystem size
+Test failed: file_write wrtoe -1 bytes, expected 49.
 No runnable processes - exiting!
 Exiting at program request.
-Instructions executed: 4103870
-Time simulated: 4.104 secs
-Real time elapsed: 0.113 secs
-Execution rate: 36.44M simulated instructions per real second.
+Instructions executed: 5251677
+Time simulated: 5.252 secs
+Real time elapsed: 0.146 secs
+Execution rate: 36.09M simulated instructions per real second.

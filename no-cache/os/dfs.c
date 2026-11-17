@@ -472,7 +472,59 @@ int DfsInodeOpen(char *filename) {
 //-----------------------------------------------------------------
 
 int DfsInodeDelete(uint32 handle) {
+  int i;
+  int max_vblocks;
+  uint32 phys_block;
+  dfs_block b;
+  int *table;
 
+   // Check that the file system has been loaded and is valid.
+  if (sb.valid == 0) {
+    return DFS_FAIL;
+  } 
+
+  // 1. Calculate the max number of virtual blocks used by the file
+  if (inodes[handle].file_size == 0) {
+    max_vblocks = 0;
+  }
+  else {
+    // Round up to the nearest whole block
+    max_vblocks = (inodes[handle].file_size + DFS_BLOCKSIZE - 1) / DFS_BLOCKSIZE;
+  }
+
+  // 2. Free all allocated data blocks
+  for (i = 0; i < max_vblocks; i++) {
+    phys_block = DfsInodeTranslateVirtualToFilesys(handle, i);
+    if (phys_block != DFS_FAIL && phys_block != 0) {
+      DfsFreeBlock(phys_block);
+    }    
+  }
+
+  // 3. Free the single indirect table itself
+  if (inodes[handle].indirect != 0) {
+    DfsFreeBlock(inodes[handle].indirect);
+  }
+
+  // 4. Free the double indirect table blocks
+  if (inodes[handle].double_indirect != 0) {
+    // Read the top-level table to find and free the mid-level tables
+    table = (int*)b.data;
+    // The table holds DFS_BLOCKSIZE / 4 bytes = 256 entries
+    for(i = 0; i < 256; i++) {
+      if (table[i] != 0) {
+        DfsFreeBlock(table[i]);
+      }
+    }
+  }
+  // Free the top-level table block
+  DfsFreeBlock(inodes[handle].double_indirect);
+
+  // 5. Mark the inodes as free
+  LockAcquire(dfs_lock);
+  inodes[handle].inuse = 0;
+  LockRelease(dfs_lock);
+
+  return DFS_SUCCESS;
 }
 
 

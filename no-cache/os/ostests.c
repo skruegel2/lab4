@@ -52,7 +52,20 @@ void RunOSTests() {
     return;
   }
 
-  printf("Phase 3 verified: Virtual block 11 translates to DFS physical block %d\n", fbv_block_allocated);
-  printf("All phase 3/4 tests passed\n");
+  // 5. Test Phase 5: Deletion
+  if (DfsInodeDelete(inode_handle) == DFS_FAIL) {
+    printf("Test failed: DfsInodeDelete returned DFS_FAIL\n");
+    return;
+  }
+
+  // Because blocks 41 through 53 were just freed,
+  // allocating a new block should recycle the lowest available block (41)
+  fbv_block_allocated = DfsAllocateBlock();
+  if (fbv_block_allocated != 41) {
+    printf("Test failed: Data blocks were not freed.  Expected block 41 to be available\n");
+    return;
+  }
+
+  printf("All phase 3/4/5 tests passed\n");
 }
 

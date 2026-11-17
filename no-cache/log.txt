@@ -1,17 +1,16 @@
-Stack=0x1fffd4, pc starting at 0x139c0
+Stack=0x1fffd4, pc starting at 0x13d5c
 Got 2 arguments.
-Available memory: 0x2b8b0 -> 0x200000.
+Available memory: 0x2b8ec -> 0x200000.
 Argument count is 2.
 Argument 0 is -u.
 Argument 1 is ostests.dlx.obj.
 Starting DFS Phase 3/4 Inode Tests
 Opened inode 0 for 'testfile.txt'
 Successfully wrote 12KB to inode 0.
-Phase 3 verified: Virtual block 11 translates to DFS physical block 53
-All phase 3/4 tests passed
+Test failed: Data blocks were not freed.  Expected block 41 to be available
 No runnable processes - exiting!
 Exiting at program request.
-Instructions executed: 4684873
-Time simulated: 4.685 secs
-Real time elapsed: 0.130 secs
-Execution rate: 36.03M simulated instructions per real second.
+Instructions executed: 4726458
+Time simulated: 4.726 secs
+Real time elapsed: 0.125 secs
+Execution rate: 37.75M simulated instructions per real second.

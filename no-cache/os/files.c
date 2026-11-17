@@ -53,6 +53,11 @@ int FileOpen(char* filename, char* mode) {
       LockRelease(files_lock);
       return FILE_FAIL;
     }
+    inode_handle = DfsInodeOpen(filename);
+    if (inode_handle == DFS_FAIL) {
+      LockRelease(files_lock);
+      return FILE_FAIL;   // Could not allocate a new inode
+    }
   }
 
   // 3. Initialize the file descriptor

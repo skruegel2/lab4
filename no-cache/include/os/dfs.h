@@ -23,4 +23,5 @@ int DfsInodeFilesize(uint32 handle);
 int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual);
 int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum);
 
+int DfsInodeRename(char* oldname, char* newname);
 #endif

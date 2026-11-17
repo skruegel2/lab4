@@ -520,7 +520,7 @@ int DfsInodeDelete(uint32 handle) {
     // Free the top-level table block
     DfsFreeBlock(inodes[handle].double_indirect);
   }
-  
+
   // 5. Mark the inodes as free
   LockAcquire(dfs_lock);
   inodes[handle].inuse = 0;
@@ -529,7 +529,48 @@ int DfsInodeDelete(uint32 handle) {
   return DFS_SUCCESS;
 }
 
+// DfsInodeRename changes the filename of an existing inode.
+// Returns DFS_FAIL if the old file doesn't exist or the new
+// filename is already taken.
 
+int DfsInodeRename(char* oldname, char* newname)
+{
+  int handle;
+  int i;
+
+  // Validate filesystem
+  if (sb.valid == 0) {
+    return DFS_FAIL;
+  }
+
+  // Ensure the new filename isn't already in use
+  if (DfsInodeFilenameExists(newname) != DFS_FAIL) {
+    return DFS_FAIL;
+  }
+
+  // Find the existing file
+  handle = DfsInodeFilenameExists(oldname);
+  if (handle == DFS_FAIL) {
+    return DFS_FAIL;
+  }
+
+  // Acquire lock to safely modify the inode data
+  LockAcquire(dfs_lock);
+
+  for(i = 0; i < FILE_MAX_FILENAME_LENGTH; i++) {
+    inodes[handle].filename[i] = newname[i];
+    if (newname[i] == '\0') {
+      break;
+    }
+  }
+
+  // Guarantee null termination
+  inodes[handle].filename[FILE_MAX_FILENAME_LENGTH - 1] = '\0';
+
+  LockRelease(dfs_lock);
+
+  return DFS_SUCCESS;
+}
 //-----------------------------------------------------------------
 // DfsInodeReadBytes reads num_bytes from the file represented by 
 // the inode handle, starting at virtual byte start_byte, copying 

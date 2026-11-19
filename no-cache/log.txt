@@ -1,4 +1,4 @@
-Stack=0x1fffd0, pc starting at 0x1498c
+Stack=0x1fffd0, pc starting at 0x14b74
 Got 2 arguments.
 Available memory: 0x2c9a4 -> 0x200000.
 Argument count is 2.
@@ -12,7 +12,7 @@ Successfully read and verified 49 bytes from file: 'Hello DFS!  This is a test o
 All file API tests passed!
 No runnable processes - exiting!
 Exiting at program request.
-Instructions executed: 5429700
-Time simulated: 5.430 secs
-Real time elapsed: 0.144 secs
-Execution rate: 37.81M simulated instructions per real second.
+Instructions executed: 5448784
+Time simulated: 5.449 secs
+Real time elapsed: 0.140 secs
+Execution rate: 38.83M simulated instructions per real second.

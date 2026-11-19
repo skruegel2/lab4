@@ -133,8 +133,8 @@ int DfsOpenFileSystem() {
   // Write it to primary physical block 1
   DiskWriteBlock(1, &b);
 
-  // Write to duplicate superblock (offset 1 in FS block 65535)
-  DiskWriteBlock((65535 * phys_block_ratio) + 1, &b);
+  // Write to duplicate superblock 
+  DiskWriteBlock(((sb.total_fs_blocks - 1) * phys_block_ratio) + 1, &b);
 
   // Change it back to be valid in memory
   sb.valid = 1;
@@ -196,8 +196,8 @@ int DfsCloseFileSystem() {
   // Write to primary physical block 1
   DiskWriteBlock(1, &b);
 
-  // Write to duplicate superblock (offset 1 in FS Block 65535)
-  DiskWriteBlock((65535 * phys_block_ratio) + 1, &b);
+  // Write to duplicate superblock 
+  DiskWriteBlock(((sb.total_fs_blocks - 1) * phys_block_ratio) + 1, &b);
 
   // Invalidate memory copy after successful flush
   sb.valid = 0;
@@ -477,11 +477,15 @@ int DfsInodeDelete(uint32 handle) {
   uint32 phys_block;
   dfs_block b;
   int *table;
+  uint32 entries_per_block;
+
 
    // Check that the file system has been loaded and is valid.
   if (sb.valid == 0) {
     return DFS_FAIL;
   } 
+
+  entries_per_block = sb.fs_blocksize / sizeof(int);
 
   // 1. Calculate the max number of virtual blocks used by the file
   if (inodes[handle].file_size == 0) {
@@ -489,7 +493,7 @@ int DfsInodeDelete(uint32 handle) {
   }
   else {
     // Round up to the nearest whole block
-    max_vblocks = (inodes[handle].file_size + DFS_BLOCKSIZE - 1) / DFS_BLOCKSIZE;
+    max_vblocks = (inodes[handle].file_size + sb.fs_blocksize - 1) / sb.fs_blocksize;
   }
 
   // 2. Free all allocated data blocks
@@ -511,7 +515,7 @@ int DfsInodeDelete(uint32 handle) {
     if (DfsReadBlock(inodes[handle].double_indirect, &b) != DFS_FAIL) {
       table = (int*)b.data;
       // The table holds DFS_BLOCKSIZE / 4 bytes = 256 entries
-      for(i = 0; i < 256; i++) {
+      for(i = 0; i < entries_per_block; i++) {
         if (table[i] != 0) {
           DfsFreeBlock(table[i]);
         }
@@ -601,11 +605,11 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
   }
 
   while (num_bytes > 0) {
-    virtual_block = start_byte / DFS_BLOCKSIZE;
-    offset = start_byte % DFS_BLOCKSIZE;
+    virtual_block = start_byte / sb.fs_blocksize;
+    offset = start_byte % sb.fs_blocksize;
 
     // Calculate how many bytes we can read from the current block
-    bytes_to_read = DFS_BLOCKSIZE - offset;
+    bytes_to_read = sb.fs_blocksize - offset;
     if (bytes_to_read > num_bytes) {
       bytes_to_read = num_bytes;
     }
@@ -614,7 +618,7 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
     if (physical_block == DFS_FAIL) {
       return DFS_FAIL;  // Should not happen if file_size is correct
     }
-
+    DfsReadBlock(physical_block, &b);
     bcopy(b.data + offset, dest + bytes_read, bytes_to_read);
     bytes_read += bytes_to_read;
     start_byte += bytes_to_read;
@@ -648,10 +652,10 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
   }
 
   while (num_bytes > 0) {
-    virtual_block = start_byte / DFS_BLOCKSIZE;
-    offset = start_byte % DFS_BLOCKSIZE;
+    virtual_block = start_byte / sb.fs_blocksize;
+    offset = start_byte % sb.fs_blocksize;
 
-    bytes_to_write = DFS_BLOCKSIZE - offset;
+    bytes_to_write = sb.fs_blocksize - offset;
     if (bytes_to_write > num_bytes) {
       bytes_to_write = num_bytes;
     }
@@ -663,7 +667,7 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
     }
 
     // If we are doing a partial write, we must read the existing block data first
-    if (bytes_to_write < DFS_BLOCKSIZE) {
+    if (bytes_to_write < sb.fs_blocksize) {
       // If the block is brand new (indicated by the write extending file_size past block bounds),
       // there's no need to read.  But if modifying exising data, read it in.
       if (start_byte < inodes[handle].file_size) {
@@ -673,7 +677,7 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
       }
       else {
         // New partial block: zero it to avoid garbage data
-        bzero(b.data, DFS_BLOCKSIZE);
+        bzero(b.data, sb.fs_blocksize);
       }
     }
 
@@ -730,11 +734,14 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
   uint32 indirect_block;
   uint32 single_indirect_index;
   uint32 data_index;
+  uint32 entries_per_block;
 
   // Check that the file system has been loaded and is valid.
   if (sb.valid == 0) {
     return DFS_FAIL;
   }   
+
+  entries_per_block = sb.fs_blocksize / sizeof(int);
 
   // Validate the inode handle
   if (handle >= sb.num_inodes || inodes[handle].inuse == 0) {
@@ -759,8 +766,8 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
     return new_block;
   }
 
-  // 2. Single indirect addressing (virtual blocks 10 to 265)
-  if (virtual_blocknum < (10 + 256)) {
+  // 2. Single indirect addressing 
+  if (virtual_blocknum < (10 + entries_per_block)) {
     if (inodes[handle].indirect == 0) {
       // Allocate the single indirect table block
       inodes[handle].indirect = DfsAllocateBlock();
@@ -769,7 +776,7 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
         return DFS_FAIL;
       }
       // Zero out the newly created indirect block
-      bzero(b.data, DFS_BLOCKSIZE);
+      bzero(b.data, sb.fs_blocksize);
       DfsWriteBlock(inodes[handle].indirect, &b);
     }
 
@@ -787,9 +794,9 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
     return new_block;
   }
 
-  // 3. Double indirect addressing (virtual blocks 266 and above)
-  single_indirect_index = (virtual_blocknum - 266) / 256;
-  data_index = (virtual_blocknum - 266) % 256;
+  // 3. Double indirect addressing 
+  single_indirect_index = (virtual_blocknum - (10 + entries_per_block)) / entries_per_block;
+  data_index = (virtual_blocknum - (10 + entries_per_block)) % entries_per_block;
 
   // Allocate top-level double indirect table if missing
   if (inodes[handle].double_indirect == 0) {
@@ -798,7 +805,7 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
       DfsFreeBlock(new_block);
       return DFS_FAIL;
     }
-    bzero(b.data, DFS_BLOCKSIZE);
+    bzero(b.data, sb.fs_blocksize);
     DfsWriteBlock(inodes[handle].double_indirect, & b);
   }
 
@@ -822,7 +829,7 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
     DfsWriteBlock(inodes[handle].double_indirect, &b);
 
     // Zero out the new mid-level block and write it to disk
-    bzero(b.data, DFS_BLOCKSIZE);
+    bzero(b.data, sb.fs_blocksize);
     DfsWriteBlock(indirect_block, &b);
   }
 
@@ -854,11 +861,14 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
   uint32 single_indirect_index;
   uint32 data_index;
   uint32 block_result;
+  uint32 entries_per_block;
 
   // Check that the file system has been loaded and is valid.
   if (sb.valid == 0) {
     return DFS_FAIL;
   }  
+
+  entries_per_block = sb.fs_blocksize / sizeof(int);
 
   // Validate the inode handle
   if (handle >= sb.num_inodes || inodes[handle].inuse == 0) {
@@ -874,8 +884,8 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
     return block_result;
   }
 
-  // 2. Single indirect addressing (virtual blocks 10 to 265)
-  if (virtual_blocknum < (10 + 256)) {
+  // 2. Single indirect addressing 
+  if (virtual_blocknum < (10 + entries_per_block)) {
     if (inodes[handle].indirect == 0) {
       return DFS_FAIL;  // Indirect table not allocated
     }
@@ -899,11 +909,16 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
   if (inodes[handle].double_indirect == 0) {
     return DFS_FAIL;
   }
+  // Read the double indirect table block
+  if (DfsReadBlock(inodes[handle].double_indirect, &b) == DFS_FAIL) {
+    return DFS_FAIL;
+  }
+
   table = (int*)b.data;
 
   // Calculate the offsets
-  single_indirect_index = (virtual_blocknum - 266) /256;
-  data_index = (virtual_blocknum -266) % 256;
+  single_indirect_index = (virtual_blocknum - (10 + entries_per_block)) / entries_per_block;
+  data_index = (virtual_blocknum - (10 + entries_per_block)) % entries_per_block;
 
   indirect_blocknum = table[single_indirect_index];
   if (indirect_blocknum == 0) {

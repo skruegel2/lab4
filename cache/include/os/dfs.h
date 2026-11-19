@@ -3,15 +3,22 @@
 
 #include "dfs_shared.h"
 
+#define DFS_CACHE_SLOTS 32
+
 // Non- node prototypes
 void DfsModuleInit();
 void DfsInvalidate();
-int DfsOpenFileSystems();
+int DfsOpenFileSystem();
 int DfsCloseFileSystem();
 int DfsAllocateBlock();
 int DfsFreeBlock(uint32 blocknum);
 int DfsReadBlock(uint32 blocknum, dfs_block *b);
 int DfsWriteBlock(uint32 blocknum, dfs_block * b);
+int DfsReadBlockUncached(uint32 blocknum, dfs_block *b);
+int DfsWriteBlockUncached(uint32 blocknum, dfs_block *b);
+int DfsCacheHit(int blocknum);
+int DfsCachAllocateSlot(int blocknum);
+int DfsCacheFlush();
 
 // Inode prototypes
 int DfsInodeFilenameExists(char* filename);

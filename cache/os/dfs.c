@@ -19,6 +19,27 @@ static inline uint32 invert(uint32 n) { return n ^ negativeone; }
 
 static uint32 dfs_lock;
 
+typedef struct dfs_cache_slot {
+  Link *l;          // ptr to dynamically allocated AQueue link
+  int slot_index;   // Index (0..32) in the cache[] array
+  int inuse;        // 1 if valid block is cached, 0 if empty
+  int dirty;        // 1 if modified and needs write-back, 0 if clean
+  uint32 blocknum;  // DFS filesystem block num
+  dfs_block data;   // block payload
+} dfs_cache_slot;
+
+static dfs_cache_slot cache[DFS_CACHE_SLOTS];
+static Queue free_cache_q;  // Tracks available empty slots
+static Queue fifo_cache_q;  // Tracks allocated slots in FIFO order
+
+static lock_t cache_lock;
+
+// Cumulative cache and physical disk counters
+static uint32 cache_hits = 0;
+static uint32 cache_misses = 0;
+static uint32 disk_reads = 0;
+static uint32 disk_writes = 0;
+
 // STUDENT: put your file system level functions below.
 // Some skeletons are provided. You can implement additional functions.
 
@@ -32,10 +53,31 @@ static uint32 dfs_lock;
 //-----------------------------------------------------------------
 
 void DfsModuleInit() {
+  int i;
 // You essentially set the file system as invalid and then open 
 // using DfsOpenFileSystem().
-  // Initialize the lock to protect the free block vector and inodes
   dfs_lock = LockCreate();
+  cache_lock = LockCreate();
+
+  // Initialize the empty and active FIFO queues
+  AQueueInit(&free_cache_q);
+  AQueueInit(&fifo_cache_q);
+
+  // Reset telemetry counters
+  cache_hits = 0;
+  cache_misses = 0;
+  disk_reads = 0;
+  disk_writes = 0;
+
+  // Initialize all 32 cache slots and place them in free_cache q
+  for (i = 0; i < DFS_CACHE_SLOTS; i++) {
+    cache[i].slot_index = i;
+    cache[i].inuse = 0;
+    cache[i].dirty = 0;
+    cache[i].blocknum = 0;
+    cache[i].l = AQueueAllocLink(&cache[i]);
+    AQueueInsertLast(&free_cache_q, &cache[i].l);
+  }
 
   // Set file system as invalid, then open
   DfsInvalidate();
@@ -300,12 +342,12 @@ int DfsFreeBlock(uint32 blocknum) {
 
 
 //-----------------------------------------------------------------
-// DfsReadBlock reads an allocated DFS block from the disk
+// DfsReadBlockUncached reads an allocated DFS block from the disk
 // (which could span multiple physical disk blocks).  The block
 // must be allocated in order to read from it.  Returns DFS_FAIL
 // on failure, and the number of bytes read on success.  
 //-----------------------------------------------------------------
-int DfsReadBlock(uint32 blocknum, dfs_block *b) {
+int DfsReadBlockUncached(uint32 blocknum, dfs_block *b) {
   disk_block phys_b;
   uint32 phys_block_ratio;
   uint32 phys_block_start;
@@ -333,14 +375,21 @@ int DfsReadBlock(uint32 blocknum, dfs_block *b) {
   return sb.fs_blocksize;
 }
 
+int DfsReadBlock(uint32 blocknum, dfs_block *b) {
+  return 0;
+}
+
+int DfsWriteBlock(uint32 blocknum, dfs_block * b) {
+  return 0;
+}
 
 //-----------------------------------------------------------------
-// DfsWriteBlock writes to an allocated DFS block on the disk
+// DfsWriteBlockUncached writes to an allocated DFS block on the disk
 // (which could span multiple physical disk blocks).  The block
 // must be allocated in order to write to it.  Returns DFS_FAIL
 // on failure, and the number of bytes written on success.  
 //-----------------------------------------------------------------
-int DfsWriteBlock(uint32 blocknum, dfs_block *b){
+int DfsWriteBlockUncached(uint32 blocknum, dfs_block *b){
   disk_block phys_b;
   uint32 phys_block_ratio;
   uint32 phys_block_start;

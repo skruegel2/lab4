@@ -1,18 +1,274 @@
-Stack=0x1fffd0, pc starting at 0x14b74
-Got 2 arguments.
-Available memory: 0x2c9a4 -> 0x200000.
-Argument count is 2.
-Argument 0 is -u.
-Argument 1 is filetest.dlx.obj.
-Starting Question 6 API test.
-Successfully wrote 49 bytes to file.
-Successfully closed file
-Successfully reopened 'test_api.txt' for reading (fd: 0).
-Successfully read and verified 49 bytes from file: 'Hello DFS!  This is a test of the user file API.'
-All file API tests passed!
-No runnable processes - exiting!
+setting debug flag c
+Stack=0x1fffc0, pc starting at 0x160f0
+Got 4 arguments.
+Available memory: 0x35d54 -> 0x200000.
+Argument count is 4.
+Argument 0 is -D.
+Argument 1 is c.
+Argument 2 is -u.
+Argument 3 is filetest2.dlx.obj.
+ClkStart: clock started
+Starting Question 7 Buffer Cashe test.
+
+--- Part 1: Basic Cache Hit and Write-Back test
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
+Exiting after illegal address at iar=0x17a1c, isr=0x14f
 Exiting at program request.
-Instructions executed: 5448784
-Time simulated: 5.449 secs
-Real time elapsed: 0.140 secs
-Execution rate: 38.83M simulated instructions per real second.
+Instructions executed: 5413668
+Time simulated: 5.414 secs
+Real time elapsed: 0.145 secs
+Execution rate: 37.32M simulated instructions per real second.

@@ -12,3 +12,5 @@ dlxsim -D i -x os.dlx.obj -a -D i -u fdisk.dlx.obj > ./../log.txt
 
 dlxsim -D i -x os.dlx.obj -a -D i -u ostests.dlx.obj > ./../log.txt
 
+
+dlxsim -D c -x os.dlx.obj -a -D c -u filetest2.dlx.obj > ./../log.txt

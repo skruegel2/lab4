@@ -8,7 +8,7 @@
 // You have already been told about the most likely places where you should use locks. You may use 
 // additional locks if it is really necessary.
 static file_descriptor open_files[FILE_MAX_OPEN_FILES];
-static uint32 files_lock;
+static lock_t files_lock;
 
 // FileModuleInit initializes the file descriptor table and the lock
 void FileModuleInit() {

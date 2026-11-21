@@ -838,6 +838,7 @@ void main (int argc, char *argv[])
   FsClose (i);
 
   DfsModuleInit();
+  FileModuleInit();
   dbprintf ('i', "After initializing dfs filesystem.\n");
 
   // Setup command line arguments

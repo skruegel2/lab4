@@ -278,7 +278,7 @@ int DfsAllocateBlock() {
   total_fbv_ints = sb.total_fs_blocks / 32;
 
   // Acquire lock before reading the shared fbv
-  LockAcquire(dfs_lock);
+  LockHandleAcquire(dfs_lock);
 
   for (i = 0; i < total_fbv_ints; i++) {
     // If the integer is not completely full of 1s
@@ -301,7 +301,7 @@ int DfsAllocateBlock() {
   }
 
   // Release the lock after modifying
-  LockRelease(dfs_lock);
+  LockHandleRelease(dfs_lock);
 
   // Return handle or DFS_FAIL
   return blocknum;
@@ -335,13 +335,13 @@ int DfsFreeBlock(uint32 blocknum) {
   mask = invert(1 << bit_index);
 
   // Acquire lock before modifying fbv
-  LockAcquire(dfs_lock);
+  LockHandleAcquire(dfs_lock);
 
   // Use bitwise AND to clear the specific bit to 0 (free)
   fbv[array_index] &= mask;
 
   // Release lock
-  LockRelease(dfs_lock);
+  LockHandleRelease(dfs_lock);
 
   return DFS_SUCCESS;
 }
@@ -389,11 +389,11 @@ int DfsReadBlock(uint32 blocknum, dfs_block *b) {
     return DFS_FAIL;
   }
 
-  LockAcquire(cache_lock);
+  LockHandleAcquire(cache_lock);
 
   slot = DfsCacheHitInternal(blocknum);
   if (slot != DFS_FAIL) {
-    dbprintf('c', "Cache Hit: Block %d found in slot %d (Hits=%d, Misses=%d)\n",
+    dbprintf('b', "Cache Hit: Block %d found in slot %d (Hits=%d, Misses=%d)\n",
         blocknum, slot, cache_hits, cache_misses);
     cache_hits++;    
   }
@@ -401,12 +401,12 @@ int DfsReadBlock(uint32 blocknum, dfs_block *b) {
     cache_misses++;
     slot = DfsCacheAllocateSlotInternal(blocknum);
     if (slot == DFS_FAIL) {
-      LockRelease(cache_lock);
+      LockHandleRelease(cache_lock);
       return DFS_FAIL;
     }
 
     if (DfsReadBlockUncached(blocknum, &cache[slot].data) == DFS_FAIL) {
-      LockRelease(cache_lock);
+      LockHandleRelease(cache_lock);
       return DFS_FAIL;
     }
 
@@ -415,7 +415,7 @@ int DfsReadBlock(uint32 blocknum, dfs_block *b) {
 
   bcopy(cache[slot].data.data, b->data, sb.fs_blocksize);
 
-  LockRelease(cache_lock);
+  LockHandleRelease(cache_lock);
   return sb.fs_blocksize;
 }
 
@@ -429,11 +429,11 @@ int DfsWriteBlock(uint32 blocknum, dfs_block * b) {
     return DFS_FAIL;
   }
 
-  LockAcquire(cache_lock);
+  LockHandleAcquire(cache_lock);
 
   slot = DfsCacheHitInternal(blocknum);
   if (slot != DFS_FAIL) {
-    dbprintf('c', "Cache Hit: Block %d found in slot %d (Hits=%d, Misses=%d)\n",
+    dbprintf('b', "Cache Hit: Block %d found in slot %d (Hits=%d, Misses=%d)\n",
         blocknum, slot, cache_hits, cache_misses);    
     cache_hits++;
   }
@@ -442,12 +442,12 @@ int DfsWriteBlock(uint32 blocknum, dfs_block * b) {
 
     slot = DfsCacheAllocateSlotInternal(blocknum);
     if (slot == DFS_FAIL) {
-      LockRelease(cache_lock);
+      LockHandleRelease(cache_lock);
       return DFS_FAIL;
     }
 
     if (DfsReadBlockUncached(blocknum, &cache[slot].data) == DFS_FAIL) {
-      LockRelease(cache_lock);
+      LockHandleRelease(cache_lock);
       return DFS_FAIL;
     }
 
@@ -457,7 +457,7 @@ int DfsWriteBlock(uint32 blocknum, dfs_block * b) {
   bcopy(b->data, cache[slot].data.data, sb.fs_blocksize);
   cache[slot].dirty = 1;
 
-  LockRelease(cache_lock);
+  LockHandleRelease(cache_lock);
   return sb.fs_blocksize;
 }
 
@@ -472,7 +472,7 @@ int DfsCacheFlush() {
     return DFS_FAIL;
   }
 
-  LockAcquire(cache_lock);
+  LockHandleAcquire(cache_lock);
 
   while (!AQueueEmpty(&fifo_cache_q)) {
     link = AQueueFirst(&fifo_cache_q);
@@ -480,10 +480,10 @@ int DfsCacheFlush() {
     AQueueRemove(&slot_ptr->l);
 
     if (slot_ptr->dirty == 1) {
-      dbprintf('c', "Cache Flush: Writing dirty block %d from slot %d\n",
+      dbprintf('b', "Cache Flush: Writing dirty block %d from slot %d\n",
           slot_ptr->blocknum, slot_ptr->slot_index);      
       if (DfsWriteBlockUncached(slot_ptr->blocknum, &slot_ptr->data) == DFS_FAIL) {
-        LockRelease(cache_lock);
+        LockHandleRelease(cache_lock);
         return DFS_FAIL;        
       }
       slot_ptr->dirty = 0;
@@ -494,12 +494,12 @@ int DfsCacheFlush() {
 
     slot_ptr->l = AQueueAllocLink(slot_ptr);
     if (slot_ptr->l == NULL || AQueueInsertLast(&free_cache_q, slot_ptr->l) == QUEUE_FAIL) {
-      LockRelease(cache_lock);
+      LockHandleRelease(cache_lock);
       return DFS_FAIL;
     }
   }
   
-  LockRelease(cache_lock);
+  LockHandleRelease(cache_lock);
   return DFS_SUCCESS;
 }
 
@@ -593,7 +593,7 @@ int DfsInodeOpen(char *filename) {
   handle = DFS_FAIL;
 
   // Acquire lock before modifying shared inodes array
-  LockAcquire(dfs_lock);
+  LockHandleAcquire(dfs_lock);
 
   for(i = 0; i < sb.num_inodes; i++) {
     if (inodes[i].inuse == 0) {
@@ -624,7 +624,7 @@ int DfsInodeOpen(char *filename) {
     }
   }
   // Release the lock
-  LockRelease(dfs_lock);
+  LockHandleRelease(dfs_lock);
   
   return handle;
 }
@@ -693,9 +693,9 @@ int DfsInodeDelete(uint32 handle) {
   }
 
   // 5. Mark the inodes as free
-  LockAcquire(dfs_lock);
+  LockHandleAcquire(dfs_lock);
   inodes[handle].inuse = 0;
-  LockRelease(dfs_lock);
+  LockHandleRelease(dfs_lock);
 
   return DFS_SUCCESS;
 }
@@ -726,7 +726,7 @@ int DfsInodeRename(char* oldname, char* newname)
   }
 
   // Acquire lock to safely modify the inode data
-  LockAcquire(dfs_lock);
+  LockHandleAcquire(dfs_lock);
 
   for(i = 0; i < FILE_MAX_FILENAME_LENGTH; i++) {
     inodes[handle].filename[i] = newname[i];
@@ -738,7 +738,7 @@ int DfsInodeRename(char* oldname, char* newname)
   // Guarantee null termination
   inodes[handle].filename[FILE_MAX_FILENAME_LENGTH - 1] = '\0';
 
-  LockRelease(dfs_lock);
+  LockHandleRelease(dfs_lock);
 
   return DFS_SUCCESS;
 }
@@ -1030,7 +1030,7 @@ static void PrintCacheMissStats() {
   hit_scaled = (cache_hits * 100000 + (total /2)) /total;
   miss_scaled = (cache_misses * 100000 + (total /2)) /total;
 
-  printf("Cache MIss: Hit Rate = %d.%03d%%, Miss Rate = %d.%03d%%, Disk Reads = %d, Disk Writes = %d\n",
+  printf("Cache Miss: Hit Rate = %d.%03d%%, Miss Rate = %d.%03d%%, Disk Reads = %d, Disk Writes = %d\n",
           hit_scaled / 1000, hit_scaled % 1000,
           miss_scaled / 1000, miss_scaled % 1000,
           disk_reads, disk_writes);
@@ -1056,9 +1056,9 @@ int DfsCacheHit(int blocknum) {
     return DFS_FAIL;
   }
 
-  LockAcquire(cache_lock);
+  LockHandleAcquire(cache_lock);
   slot = DfsCacheHitInternal(blocknum);
-  LockRelease(cache_lock);
+  LockHandleRelease(cache_lock);
 
   return slot;
 }
@@ -1086,7 +1086,7 @@ static int DfsCacheAllocateSlotInternal(int blocknum) {
 
     // Write back to disk if the evicted block is dirty
     if (slot_ptr->dirty == 1) {
-      dbprintf('c', "Cache Evict: Writing back dirty block %d from slot %d\n",
+      dbprintf('b', "Cache Evict: Writing back dirty block %d from slot %d\n",
           slot_ptr->blocknum, slot_ptr->slot_index);      
       if (DfsWriteBlockUncached(slot_ptr->blocknum, &slot_ptr->data) == DFS_FAIL) {
         return DFS_FAIL;
@@ -1106,6 +1106,20 @@ static int DfsCacheAllocateSlotInternal(int blocknum) {
   }
 
   return slot_ptr->slot_index;
+}
+
+int DfsCacheAllocateSlot(int blocknum) {
+  int slot;
+
+  if (sb.valid == 0 || blocknum < 0 || (uint32)blocknum >= sb.total_fs_blocks) {
+    return DFS_FAIL;
+  }
+
+  LockHandleAcquire(cache_lock);
+  slot = DfsCacheAllocateSlotInternal(blocknum);
+  LockHandleRelease(cache_lock);
+
+  return slot;
 }
 
 //-----------------------------------------------------------------

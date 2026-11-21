@@ -29,7 +29,7 @@ int FileOpen(char* filename, char* mode) {
   int fd = FILE_FAIL;
   int inode_handle;
 
-  LockAcquire(files_lock);
+  LockHandleAcquire(files_lock);
 
   // 1. Find a free file descriptor from the table
   for(i = 0; i < FILE_MAX_OPEN_FILES; i++) {
@@ -40,7 +40,7 @@ int FileOpen(char* filename, char* mode) {
   }
 
   if (fd == FILE_FAIL) {
-    LockRelease(files_lock);
+    LockHandleRelease(files_lock);
     return FILE_FAIL;   // Too many open files
   }
 
@@ -50,12 +50,12 @@ int FileOpen(char* filename, char* mode) {
   if (inode_handle == DFS_FAIL) {
     // If file doesn't exist, 'r' mode fails. 'w' and 'a' create it.
     if (mode[0] == 'r') {
-      LockRelease(files_lock);
+      LockHandleRelease(files_lock);
       return FILE_FAIL;
     }
     inode_handle = DfsInodeOpen(filename);
     if (inode_handle == DFS_FAIL) {
-      LockRelease(files_lock);
+      LockHandleRelease(files_lock);
       return FILE_FAIL;   // Could not allocate a new inode
     }
   }
@@ -73,7 +73,7 @@ int FileOpen(char* filename, char* mode) {
     open_files[fd].current_position = 0;
   }
 
-  LockRelease(files_lock);
+  LockHandleRelease(files_lock);
 
   return fd;
 }
@@ -84,9 +84,9 @@ int FileClose(int handle) {
     return FILE_FAIL;
   }
 
-  LockAcquire(files_lock);
+  LockHandleAcquire(files_lock);
   open_files[handle].inuse = 0;
-  LockRelease(files_lock);
+  LockHandleRelease(files_lock);
 
   return FILE_SUCCESS;
 }

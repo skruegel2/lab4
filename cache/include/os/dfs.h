@@ -17,7 +17,7 @@ int DfsWriteBlock(uint32 blocknum, dfs_block * b);
 int DfsReadBlockUncached(uint32 blocknum, dfs_block *b);
 int DfsWriteBlockUncached(uint32 blocknum, dfs_block *b);
 int DfsCacheHit(int blocknum);
-int DfsCachAllocateSlot(int blocknum);
+int DfsCacheAllocateSlot(int blocknum);
 int DfsCacheFlush();
 
 // Inode prototypes

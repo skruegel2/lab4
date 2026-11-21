@@ -2,7 +2,7 @@ dlxsim -D m -x os.dlx.obj -a -D m -u dyn_heap_test.dlx.obj > ./../log.txt
 
 dlxsim -x os.dlx.obj -a -u dyn_heap_test.dlx.obj > ./../log.txt
 
-dlxsim -x os.dlx.obj -a -u fdisk.dlx.obj > ./../log.txt
+dlxsim -x os.dlx.obj -a -u fdisk.dlx.obj
 
 dlxsim -x os.dlx.obj -a -u ostests.dlx.obj > ./../log.txt
 
@@ -13,4 +13,4 @@ dlxsim -D i -x os.dlx.obj -a -D i -u fdisk.dlx.obj > ./../log.txt
 dlxsim -D i -x os.dlx.obj -a -D i -u ostests.dlx.obj > ./../log.txt
 
 
-dlxsim -D c -x os.dlx.obj -a -D c -u filetest2.dlx.obj > ./../log.txt
+dlxsim -D b -x os.dlx.obj -a -D b -u filetest2.dlx.obj > ./../log.txt

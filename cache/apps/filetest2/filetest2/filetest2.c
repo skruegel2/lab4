@@ -64,7 +64,7 @@ void main (int argc, char *argv[])
   // Part 2: 36 KB fifo eviction and dirty write-back stress test
   Printf("\n Part 2: 36KB fifo eviction and dirty write-back test\n");
   fd = file_open("cache_stress.bin", "w");
-  if (fd = FILE_FAIL) {
+  if (fd == FILE_FAIL) {
     Printf("FAIL: could not open 'cache_stress.bin for writing\n");
     Exit();
   }
@@ -97,7 +97,7 @@ void main (int argc, char *argv[])
     bzero(read_chunk, CHUNK_SIZE);
     bytes_io = file_read(fd, read_chunk, CHUNK_SIZE);
     if (bytes_io != CHUNK_SIZE) {
-      Printf("FAIL: chunk %d read returned %d, expected %d\n, c, bytes_io, CHUNK_SIZE");
+      Printf("FAIL: chunk %d read returned %d, expected %d\n", c, bytes_io, CHUNK_SIZE);
       file_close(fd);
       Exit();
     }

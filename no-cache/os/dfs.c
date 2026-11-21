@@ -312,7 +312,7 @@ int DfsReadBlock(uint32 blocknum, dfs_block *b) {
   int i;
 
   // Check that the file system is valid
-  if (sb.valid == 0) {
+  if (sb.valid == 0 || blocknum >= sb.total_fs_blocks) {
     return DFS_FAIL;
   }
 
@@ -346,8 +346,8 @@ int DfsWriteBlock(uint32 blocknum, dfs_block *b){
   uint32 phys_block_start;
   int i;
 
-  // Check that the file system is valid in memory
-  if (sb.valid == 0) {
+  // Check that the file system is valid
+  if (sb.valid == 0 || blocknum >= sb.total_fs_blocks) {
     return DFS_FAIL;
   }
 
@@ -454,12 +454,11 @@ int DfsInodeOpen(char *filename) {
       handle = i;
       break;  // Exit the loop since we successfully allocated the inode      
     }
-
-    // Release the lock
-    LockHandleRelease(dfs_lock);
-    
-    return handle;
   }
+  // Release the lock
+  LockHandleRelease(dfs_lock);
+  
+  return handle;
 }
 
 

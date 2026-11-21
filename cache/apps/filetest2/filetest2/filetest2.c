@@ -17,7 +17,7 @@ void main (int argc, char *argv[])
   int bytes_io;
   char expected;
 
-  Printf("Starting Question 7 Buffer Cashe test.\n");
+  Printf("Starting Question 7 Buffer Cache test.\n");
 
   // Part 1: Single-block writeback and cache hit verification
   Printf("\n--- Part 1: Basic Cache Hit and Write-Back test\n");

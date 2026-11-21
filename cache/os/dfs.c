@@ -316,6 +316,7 @@ int DfsFreeBlock(uint32 blocknum) {
   uint32 array_index;
   uint32 bit_index;
   uint32 mask;
+  int slot;
 
   // Check that the file system has been correctly loaded into memory
   if (sb.valid == 0) {
@@ -343,6 +344,18 @@ int DfsFreeBlock(uint32 blocknum) {
   // Release lock
   LockHandleRelease(dfs_lock);
 
+  // Evict and discard if this freed block is currently in the buffer cache
+  LockHandleAcquire(cache_lock);
+  slot = DfsCacheHitInternal(blocknum);
+  if (slot != DFS_FAIL) {
+    AQueueRemove(&cache[slot].l);
+    cache[slot].inuse = 0;
+    cache[slot].dirty = 0;
+    cache[slot].blocknum = 0;
+    cache[slot].l = AQueueAllocLink(&cache[slot]);
+    AQueueInsertLast(&free_cache_q, cache[slot].l);    
+  }
+  LockHandleRelease(cache_lock);
   return DFS_SUCCESS;
 }
 
@@ -785,7 +798,9 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
     if (physical_block == DFS_FAIL) {
       return DFS_FAIL;  // Should not happen if file_size is correct
     }
-    DfsReadBlock(physical_block, &b);
+    if (DfsReadBlock(physical_block, &b) == DFS_FAIL) {
+      return DFS_FAIL;
+    }
     bcopy(b.data + offset, dest + bytes_read, bytes_to_read);
     bytes_read += bytes_to_read;
     start_byte += bytes_to_read;

@@ -17,7 +17,7 @@ static inline uint32 invert(uint32 n) { return n ^ negativeone; }
 // You have already been told about the most likely places where you should use locks. You may use 
 // additional locks if it is really necessary.
 
-static uint32 dfs_lock;
+static lock_t dfs_lock;
 
 // STUDENT: put your file system level functions below.
 // Some skeletons are provided. You can implement additional functions.
@@ -230,7 +230,7 @@ int DfsAllocateBlock() {
   total_fbv_ints = sb.total_fs_blocks / 32;
 
   // Acquire lock before reading the shared fbv
-  LockAcquire(dfs_lock);
+  LockHandleAcquire(dfs_lock);
 
   for (i = 0; i < total_fbv_ints; i++) {
     // If the integer is not completely full of 1s
@@ -253,7 +253,7 @@ int DfsAllocateBlock() {
   }
 
   // Release the lock after modifying
-  LockRelease(dfs_lock);
+  LockHandleRelease(dfs_lock);
 
   // Return handle or DFS_FAIL
   return blocknum;
@@ -287,13 +287,13 @@ int DfsFreeBlock(uint32 blocknum) {
   mask = invert(1 << bit_index);
 
   // Acquire lock before modifying fbv
-  LockAcquire(dfs_lock);
+  LockHandleAcquire(dfs_lock);
 
   // Use bitwise AND to clear the specific bit to 0 (free)
   fbv[array_index] &= mask;
 
   // Release lock
-  LockRelease(dfs_lock);
+  LockHandleRelease(dfs_lock);
 
   return DFS_SUCCESS;
 }
@@ -425,7 +425,7 @@ int DfsInodeOpen(char *filename) {
   handle = DFS_FAIL;
 
   // Acquire lock before modifying shared inodes array
-  LockAcquire(dfs_lock);
+  LockHandleAcquire(dfs_lock);
 
   for(i = 0; i < sb.num_inodes; i++) {
     if (inodes[i].inuse == 0) {
@@ -456,7 +456,7 @@ int DfsInodeOpen(char *filename) {
     }
 
     // Release the lock
-    LockRelease(dfs_lock);
+    LockHandleRelease(dfs_lock);
     
     return handle;
   }
@@ -481,7 +481,7 @@ int DfsInodeDelete(uint32 handle) {
 
 
    // Check that the file system has been loaded and is valid.
-  if (sb.valid == 0) {
+  if (sb.valid == 0 || handle >= sb.num_inodes || inodes[handle].inuse == 0) {
     return DFS_FAIL;
   } 
 
@@ -526,9 +526,12 @@ int DfsInodeDelete(uint32 handle) {
   }
 
   // 5. Mark the inodes as free
-  LockAcquire(dfs_lock);
+  LockHandleAcquire(dfs_lock);
+  inodes[handle].file_size = 0;
+  inodes[handle].indirect = 0;
+  inodes[handle].double_indirect = 0;
   inodes[handle].inuse = 0;
-  LockRelease(dfs_lock);
+  LockHandleRelease(dfs_lock);
 
   return DFS_SUCCESS;
 }
@@ -559,7 +562,7 @@ int DfsInodeRename(char* oldname, char* newname)
   }
 
   // Acquire lock to safely modify the inode data
-  LockAcquire(dfs_lock);
+  LockHandleAcquire(dfs_lock);
 
   for(i = 0; i < FILE_MAX_FILENAME_LENGTH; i++) {
     inodes[handle].filename[i] = newname[i];
@@ -571,7 +574,7 @@ int DfsInodeRename(char* oldname, char* newname)
   // Guarantee null termination
   inodes[handle].filename[FILE_MAX_FILENAME_LENGTH - 1] = '\0';
 
-  LockRelease(dfs_lock);
+  LockHandleRelease(dfs_lock);
 
   return DFS_SUCCESS;
 }
@@ -618,12 +621,17 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
     if (physical_block == DFS_FAIL) {
       return DFS_FAIL;  // Should not happen if file_size is correct
     }
-    DfsReadBlock(physical_block, &b);
+
+    if (DfsReadBlock(physical_block, &b) == DFS_FAIL) {
+      return DFS_FAIL;
+    }
+
     bcopy(b.data + offset, dest + bytes_read, bytes_to_read);
     bytes_read += bytes_to_read;
     start_byte += bytes_to_read;
     num_bytes -= bytes_to_read;
   }
+
   return bytes_read;
 }
 
@@ -737,16 +745,11 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
   uint32 entries_per_block;
 
   // Check that the file system has been loaded and is valid.
-  if (sb.valid == 0) {
+  if (sb.valid == 0 || handle >= sb.num_inodes || inodes[handle].inuse == 0) {
     return DFS_FAIL;
   }   
 
   entries_per_block = sb.fs_blocksize / sizeof(int);
-
-  // Validate the inode handle
-  if (handle >= sb.num_inodes || inodes[handle].inuse == 0) {
-    return DFS_FAIL;
-  }
 
   // Check if the virtual block is already allocated
   new_block = DfsInodeTranslateVirtualToFilesys(handle, virtual_blocknum);
@@ -777,7 +780,9 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
       }
       // Zero out the newly created indirect block
       bzero(b.data, sb.fs_blocksize);
-      DfsWriteBlock(inodes[handle].indirect, &b);
+      if (DfsWriteBlock(inodes[handle].indirect, &b) == DFS_FAIL) {
+        return DFS_FAIL;
+      }
     }
 
     // Read the indirect block, update the table, and write it back
@@ -806,7 +811,9 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
       return DFS_FAIL;
     }
     bzero(b.data, sb.fs_blocksize);
-    DfsWriteBlock(inodes[handle].double_indirect, & b);
+    if (DfsWriteBlock(inodes[handle].double_indirect, & b) == DFS_FAIL) {
+      return DFS_FAIL;
+    }
   }
 
   // Read the top-level table
@@ -826,11 +833,15 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
 
     // Write the new mid-level block number into the top-level table
     table[single_indirect_index] = indirect_block;
-    DfsWriteBlock(inodes[handle].double_indirect, &b);
+    if (DfsWriteBlock(inodes[handle].double_indirect, &b) == DFS_FAIL) {
+      return DFS_FAIL;
+    }
 
     // Zero out the new mid-level block and write it to disk
     bzero(b.data, sb.fs_blocksize);
-    DfsWriteBlock(indirect_block, &b);
+    if( DfsWriteBlock(indirect_block, &b) == DFS_FAIL) {
+      return DFS_FAIL;
+    }
   }
 
   // Read the mid-level table, insert the new data block number, and write it back
@@ -864,16 +875,11 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
   uint32 entries_per_block;
 
   // Check that the file system has been loaded and is valid.
-  if (sb.valid == 0) {
+  if (sb.valid == 0 || handle >= sb.num_inodes || inodes[handle].inuse == 0) {
     return DFS_FAIL;
   }  
 
   entries_per_block = sb.fs_blocksize / sizeof(int);
-
-  // Validate the inode handle
-  if (handle >= sb.num_inodes || inodes[handle].inuse == 0) {
-    return DFS_FAIL;
-  }
 
   // 1. Direct addressing
   if (virtual_blocknum < 10) {

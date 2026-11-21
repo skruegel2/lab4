@@ -1,5 +1,5 @@
 setting debug flag b
-Stack=0x1fffc0, pc starting at 0x16ff0
+Stack=0x1fffc0, pc starting at 0x17078
 Got 4 arguments.
 Available memory: 0x3724c -> 0x200000.
 Argument count is 4.
@@ -10,10 +10,231 @@ Argument 3 is filetest2.dlx.obj.
 Starting Question 7 Buffer Cache test.
 
 --- Part 1: Basic Cache Hit and Write-Back test
-FAIL: Write failed on 'cache_basic.txt'.
+Cache Miss: Hit Rate = 0.000%, Miss Rate = 100.000%, Disk Reads = 4, Disk Writes = 0
+Cache Hit: Block 41 found in slot 0 (Hits=0, Misses=1)
+Part 1 PASSED, verified cached read 'Hello Buffer Cache!  Testing hits and write-back.' with zero extra misses.
+
+ Part 2: 36KB fifo eviction and dirty write-back test
+Cache Miss: Hit Rate = 33.333%, Miss Rate = 66.667%, Disk Reads = 8, Disk Writes = 0
+Cache Miss: Hit Rate = 25.000%, Miss Rate = 75.000%, Disk Reads = 12, Disk Writes = 0
+Cache Miss: Hit Rate = 20.000%, Miss Rate = 80.000%, Disk Reads = 16, Disk Writes = 0
+Cache Miss: Hit Rate = 16.667%, Miss Rate = 83.333%, Disk Reads = 20, Disk Writes = 0
+Cache Miss: Hit Rate = 14.286%, Miss Rate = 85.714%, Disk Reads = 24, Disk Writes = 0
+Cache Miss: Hit Rate = 12.500%, Miss Rate = 87.500%, Disk Reads = 28, Disk Writes = 0
+Cache Miss: Hit Rate = 11.111%, Miss Rate = 88.889%, Disk Reads = 32, Disk Writes = 0
+Cache Miss: Hit Rate = 10.000%, Miss Rate = 90.000%, Disk Reads = 36, Disk Writes = 0
+Cache Miss: Hit Rate = 9.091%, Miss Rate = 90.909%, Disk Reads = 40, Disk Writes = 0
+Cache Miss: Hit Rate = 8.333%, Miss Rate = 91.667%, Disk Reads = 44, Disk Writes = 0
+Cache Miss: Hit Rate = 7.692%, Miss Rate = 92.308%, Disk Reads = 48, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=1, Misses=12)
+Cache Hit: Block 53 found in slot 11 (Hits=2, Misses=12)
+Cache Miss: Hit Rate = 18.750%, Miss Rate = 81.250%, Disk Reads = 52, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=3, Misses=13)
+Cache Hit: Block 53 found in slot 11 (Hits=4, Misses=13)
+Cache Hit: Block 53 found in slot 11 (Hits=5, Misses=13)
+Cache Miss: Hit Rate = 30.000%, Miss Rate = 70.000%, Disk Reads = 56, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=6, Misses=14)
+Cache Hit: Block 53 found in slot 11 (Hits=7, Misses=14)
+Cache Hit: Block 53 found in slot 11 (Hits=8, Misses=14)
+Cache Miss: Hit Rate = 37.500%, Miss Rate = 62.500%, Disk Reads = 60, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=9, Misses=15)
+Cache Hit: Block 53 found in slot 11 (Hits=10, Misses=15)
+Cache Hit: Block 53 found in slot 11 (Hits=11, Misses=15)
+Cache Miss: Hit Rate = 42.857%, Miss Rate = 57.143%, Disk Reads = 64, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=12, Misses=16)
+Cache Hit: Block 53 found in slot 11 (Hits=13, Misses=16)
+Cache Hit: Block 53 found in slot 11 (Hits=14, Misses=16)
+Cache Miss: Hit Rate = 46.875%, Miss Rate = 53.125%, Disk Reads = 68, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=15, Misses=17)
+Cache Hit: Block 53 found in slot 11 (Hits=16, Misses=17)
+Cache Hit: Block 53 found in slot 11 (Hits=17, Misses=17)
+Cache Miss: Hit Rate = 50.000%, Miss Rate = 50.000%, Disk Reads = 72, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=18, Misses=18)
+Cache Hit: Block 53 found in slot 11 (Hits=19, Misses=18)
+Cache Hit: Block 53 found in slot 11 (Hits=20, Misses=18)
+Cache Miss: Hit Rate = 52.500%, Miss Rate = 47.500%, Disk Reads = 76, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=21, Misses=19)
+Cache Hit: Block 53 found in slot 11 (Hits=22, Misses=19)
+Cache Hit: Block 53 found in slot 11 (Hits=23, Misses=19)
+Cache Miss: Hit Rate = 54.545%, Miss Rate = 45.455%, Disk Reads = 80, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=24, Misses=20)
+Cache Hit: Block 53 found in slot 11 (Hits=25, Misses=20)
+Cache Hit: Block 53 found in slot 11 (Hits=26, Misses=20)
+Cache Miss: Hit Rate = 56.250%, Miss Rate = 43.750%, Disk Reads = 84, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=27, Misses=21)
+Cache Hit: Block 53 found in slot 11 (Hits=28, Misses=21)
+Cache Hit: Block 53 found in slot 11 (Hits=29, Misses=21)
+Cache Miss: Hit Rate = 57.692%, Miss Rate = 42.308%, Disk Reads = 88, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=30, Misses=22)
+Cache Hit: Block 53 found in slot 11 (Hits=31, Misses=22)
+Cache Hit: Block 53 found in slot 11 (Hits=32, Misses=22)
+Cache Miss: Hit Rate = 58.929%, Miss Rate = 41.071%, Disk Reads = 92, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=33, Misses=23)
+Cache Hit: Block 53 found in slot 11 (Hits=34, Misses=23)
+Cache Hit: Block 53 found in slot 11 (Hits=35, Misses=23)
+Cache Miss: Hit Rate = 60.000%, Miss Rate = 40.000%, Disk Reads = 96, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=36, Misses=24)
+Cache Hit: Block 53 found in slot 11 (Hits=37, Misses=24)
+Cache Hit: Block 53 found in slot 11 (Hits=38, Misses=24)
+Cache Miss: Hit Rate = 60.938%, Miss Rate = 39.063%, Disk Reads = 100, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=39, Misses=25)
+Cache Hit: Block 53 found in slot 11 (Hits=40, Misses=25)
+Cache Hit: Block 53 found in slot 11 (Hits=41, Misses=25)
+Cache Miss: Hit Rate = 61.765%, Miss Rate = 38.235%, Disk Reads = 104, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=42, Misses=26)
+Cache Hit: Block 53 found in slot 11 (Hits=43, Misses=26)
+Cache Hit: Block 53 found in slot 11 (Hits=44, Misses=26)
+Cache Miss: Hit Rate = 62.500%, Miss Rate = 37.500%, Disk Reads = 108, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=45, Misses=27)
+Cache Hit: Block 53 found in slot 11 (Hits=46, Misses=27)
+Cache Hit: Block 53 found in slot 11 (Hits=47, Misses=27)
+Cache Miss: Hit Rate = 63.158%, Miss Rate = 36.842%, Disk Reads = 112, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=48, Misses=28)
+Cache Hit: Block 53 found in slot 11 (Hits=49, Misses=28)
+Cache Hit: Block 53 found in slot 11 (Hits=50, Misses=28)
+Cache Miss: Hit Rate = 63.750%, Miss Rate = 36.250%, Disk Reads = 116, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=51, Misses=29)
+Cache Hit: Block 53 found in slot 11 (Hits=52, Misses=29)
+Cache Hit: Block 53 found in slot 11 (Hits=53, Misses=29)
+Cache Miss: Hit Rate = 64.286%, Miss Rate = 35.714%, Disk Reads = 120, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=54, Misses=30)
+Cache Hit: Block 53 found in slot 11 (Hits=55, Misses=30)
+Cache Hit: Block 53 found in slot 11 (Hits=56, Misses=30)
+Cache Miss: Hit Rate = 64.773%, Miss Rate = 35.227%, Disk Reads = 124, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=57, Misses=31)
+Cache Hit: Block 53 found in slot 11 (Hits=58, Misses=31)
+Cache Hit: Block 53 found in slot 11 (Hits=59, Misses=31)
+Cache Miss: Hit Rate = 65.217%, Miss Rate = 34.783%, Disk Reads = 128, Disk Writes = 0
+Cache Hit: Block 53 found in slot 11 (Hits=60, Misses=32)
+Cache Hit: Block 53 found in slot 11 (Hits=61, Misses=32)
+Cache Hit: Block 53 found in slot 11 (Hits=62, Misses=32)
+Cache Evict: Writing back dirty block 41 from slot 0
+Cache Miss: Hit Rate = 65.625%, Miss Rate = 34.375%, Disk Reads = 132, Disk Writes = 4
+Cache Hit: Block 53 found in slot 11 (Hits=63, Misses=33)
+Cache Hit: Block 53 found in slot 11 (Hits=64, Misses=33)
+Cache Hit: Block 53 found in slot 11 (Hits=65, Misses=33)
+Cache Evict: Writing back dirty block 42 from slot 1
+Cache Miss: Hit Rate = 66.000%, Miss Rate = 34.000%, Disk Reads = 136, Disk Writes = 8
+Cache Hit: Block 53 found in slot 11 (Hits=66, Misses=34)
+Cache Hit: Block 53 found in slot 11 (Hits=67, Misses=34)
+Cache Hit: Block 53 found in slot 11 (Hits=68, Misses=34)
+Cache Evict: Writing back dirty block 43 from slot 2
+Cache Miss: Hit Rate = 66.346%, Miss Rate = 33.654%, Disk Reads = 140, Disk Writes = 12
+Cache Hit: Block 53 found in slot 11 (Hits=69, Misses=35)
+Cache Hit: Block 53 found in slot 11 (Hits=70, Misses=35)
+Cache Hit: Block 53 found in slot 11 (Hits=71, Misses=35)
+Cache Evict: Writing back dirty block 44 from slot 3
+Cache Miss: Hit Rate = 66.667%, Miss Rate = 33.333%, Disk Reads = 144, Disk Writes = 16
+Cache Hit: Block 53 found in slot 11 (Hits=72, Misses=36)
+Cache Hit: Block 53 found in slot 11 (Hits=73, Misses=36)
+Cache Hit: Block 53 found in slot 11 (Hits=74, Misses=36)
+Cache Evict: Writing back dirty block 45 from slot 4
+Cache Miss: Hit Rate = 66.964%, Miss Rate = 33.036%, Disk Reads = 148, Disk Writes = 20
+Cache Hit: Block 53 found in slot 11 (Hits=75, Misses=37)
+Cache Hit: Block 53 found in slot 11 (Hits=76, Misses=37)
+Cache Hit: Block 53 found in slot 11 (Hits=77, Misses=37)
+Cache Evict: Writing back dirty block 46 from slot 5
+Cache Miss: Hit Rate = 67.241%, Miss Rate = 32.759%, Disk Reads = 152, Disk Writes = 24
+Successfully wrote 36 KB across 37 DFS blocks (forcing fifo dirty evictions)
+Cache Evict: Writing back dirty block 47 from slot 6
+Cache Miss: Hit Rate = 66.667%, Miss Rate = 33.333%, Disk Reads = 156, Disk Writes = 28
+Cache Evict: Writing back dirty block 48 from slot 7
+Cache Miss: Hit Rate = 66.102%, Miss Rate = 33.898%, Disk Reads = 160, Disk Writes = 32
+Cache Evict: Writing back dirty block 49 from slot 8
+Cache Miss: Hit Rate = 65.546%, Miss Rate = 34.454%, Disk Reads = 164, Disk Writes = 36
+Cache Evict: Writing back dirty block 50 from slot 9
+Cache Miss: Hit Rate = 65.000%, Miss Rate = 35.000%, Disk Reads = 168, Disk Writes = 40
+Cache Evict: Writing back dirty block 51 from slot 10
+Cache Miss: Hit Rate = 64.463%, Miss Rate = 35.537%, Disk Reads = 172, Disk Writes = 44
+Cache Evict: Writing back dirty block 53 from slot 11
+Cache Miss: Hit Rate = 63.934%, Miss Rate = 36.066%, Disk Reads = 176, Disk Writes = 48
+Cache Evict: Writing back dirty block 52 from slot 12
+Cache Miss: Hit Rate = 63.415%, Miss Rate = 36.585%, Disk Reads = 180, Disk Writes = 52
+Cache Evict: Writing back dirty block 54 from slot 13
+Cache Miss: Hit Rate = 62.903%, Miss Rate = 37.097%, Disk Reads = 184, Disk Writes = 56
+Cache Evict: Writing back dirty block 55 from slot 14
+Cache Miss: Hit Rate = 62.400%, Miss Rate = 37.600%, Disk Reads = 188, Disk Writes = 60
+Cache Evict: Writing back dirty block 56 from slot 15
+Cache Miss: Hit Rate = 61.905%, Miss Rate = 38.095%, Disk Reads = 192, Disk Writes = 64
+Cache Evict: Writing back dirty block 57 from slot 16
+Cache Miss: Hit Rate = 61.417%, Miss Rate = 38.583%, Disk Reads = 196, Disk Writes = 68
+Cache Evict: Writing back dirty block 58 from slot 17
+Cache Miss: Hit Rate = 60.938%, Miss Rate = 39.063%, Disk Reads = 200, Disk Writes = 72
+Cache Hit: Block 53 found in slot 16 (Hits=78, Misses=50)
+Cache Evict: Writing back dirty block 59 from slot 18
+Cache Miss: Hit Rate = 60.769%, Miss Rate = 39.231%, Disk Reads = 204, Disk Writes = 76
+Cache Hit: Block 53 found in slot 16 (Hits=79, Misses=51)
+Cache Evict: Writing back dirty block 60 from slot 19
+Cache Miss: Hit Rate = 60.606%, Miss Rate = 39.394%, Disk Reads = 208, Disk Writes = 80
+Cache Hit: Block 53 found in slot 16 (Hits=80, Misses=52)
+Cache Evict: Writing back dirty block 61 from slot 20
+Cache Miss: Hit Rate = 60.448%, Miss Rate = 39.552%, Disk Reads = 212, Disk Writes = 84
+Cache Hit: Block 53 found in slot 16 (Hits=81, Misses=53)
+Cache Evict: Writing back dirty block 62 from slot 21
+Cache Miss: Hit Rate = 60.294%, Miss Rate = 39.706%, Disk Reads = 216, Disk Writes = 88
+Cache Hit: Block 53 found in slot 16 (Hits=82, Misses=54)
+Cache Evict: Writing back dirty block 63 from slot 22
+Cache Miss: Hit Rate = 60.145%, Miss Rate = 39.855%, Disk Reads = 220, Disk Writes = 92
+Cache Hit: Block 53 found in slot 16 (Hits=83, Misses=55)
+Cache Evict: Writing back dirty block 64 from slot 23
+Cache Miss: Hit Rate = 60.000%, Miss Rate = 40.000%, Disk Reads = 224, Disk Writes = 96
+Cache Hit: Block 53 found in slot 16 (Hits=84, Misses=56)
+Cache Evict: Writing back dirty block 65 from slot 24
+Cache Miss: Hit Rate = 59.859%, Miss Rate = 40.141%, Disk Reads = 228, Disk Writes = 100
+Cache Hit: Block 53 found in slot 16 (Hits=85, Misses=57)
+Cache Evict: Writing back dirty block 66 from slot 25
+Cache Miss: Hit Rate = 59.722%, Miss Rate = 40.278%, Disk Reads = 232, Disk Writes = 104
+Cache Hit: Block 53 found in slot 16 (Hits=86, Misses=58)
+Cache Evict: Writing back dirty block 67 from slot 26
+Cache Miss: Hit Rate = 59.589%, Miss Rate = 40.411%, Disk Reads = 236, Disk Writes = 108
+Cache Hit: Block 53 found in slot 16 (Hits=87, Misses=59)
+Cache Evict: Writing back dirty block 68 from slot 27
+Cache Miss: Hit Rate = 59.459%, Miss Rate = 40.541%, Disk Reads = 240, Disk Writes = 112
+Cache Hit: Block 53 found in slot 16 (Hits=88, Misses=60)
+Cache Evict: Writing back dirty block 69 from slot 28
+Cache Miss: Hit Rate = 59.333%, Miss Rate = 40.667%, Disk Reads = 244, Disk Writes = 116
+Cache Hit: Block 53 found in slot 16 (Hits=89, Misses=61)
+Cache Evict: Writing back dirty block 70 from slot 29
+Cache Miss: Hit Rate = 59.211%, Miss Rate = 40.789%, Disk Reads = 248, Disk Writes = 120
+Cache Hit: Block 53 found in slot 16 (Hits=90, Misses=62)
+Cache Evict: Writing back dirty block 71 from slot 30
+Cache Miss: Hit Rate = 59.091%, Miss Rate = 40.909%, Disk Reads = 252, Disk Writes = 124
+Cache Hit: Block 53 found in slot 16 (Hits=91, Misses=63)
+Cache Evict: Writing back dirty block 72 from slot 31
+Cache Miss: Hit Rate = 58.974%, Miss Rate = 41.026%, Disk Reads = 256, Disk Writes = 128
+Cache Hit: Block 53 found in slot 16 (Hits=92, Misses=64)
+Cache Evict: Writing back dirty block 73 from slot 0
+Cache Miss: Hit Rate = 58.861%, Miss Rate = 41.139%, Disk Reads = 260, Disk Writes = 132
+Cache Hit: Block 53 found in slot 16 (Hits=93, Misses=65)
+Cache Evict: Writing back dirty block 74 from slot 1
+Cache Miss: Hit Rate = 58.750%, Miss Rate = 41.250%, Disk Reads = 264, Disk Writes = 136
+Cache Hit: Block 53 found in slot 16 (Hits=94, Misses=66)
+Cache Evict: Writing back dirty block 75 from slot 2
+Cache Miss: Hit Rate = 58.642%, Miss Rate = 41.358%, Disk Reads = 268, Disk Writes = 140
+Cache Hit: Block 53 found in slot 16 (Hits=95, Misses=67)
+Cache Evict: Writing back dirty block 76 from slot 3
+Cache Miss: Hit Rate = 58.537%, Miss Rate = 41.463%, Disk Reads = 272, Disk Writes = 144
+Cache Hit: Block 53 found in slot 16 (Hits=96, Misses=68)
+Cache Evict: Writing back dirty block 77 from slot 4
+Cache Miss: Hit Rate = 58.434%, Miss Rate = 41.566%, Disk Reads = 276, Disk Writes = 148
+Cache Hit: Block 53 found in slot 16 (Hits=97, Misses=69)
+Cache Evict: Writing back dirty block 78 from slot 5
+Cache Miss: Hit Rate = 58.333%, Miss Rate = 41.667%, Disk Reads = 280, Disk Writes = 152
+Cache Hit: Block 53 found in slot 16 (Hits=98, Misses=70)
+Cache Miss: Hit Rate = 58.235%, Miss Rate = 41.765%, Disk Reads = 284, Disk Writes = 152
+Cache Hit: Block 53 found in slot 16 (Hits=99, Misses=71)
+Cache Miss: Hit Rate = 58.140%, Miss Rate = 41.860%, Disk Reads = 288, Disk Writes = 152
+Cache Hit: Block 53 found in slot 16 (Hits=100, Misses=72)
+Cache Miss: Hit Rate = 58.046%, Miss Rate = 41.954%, Disk Reads = 292, Disk Writes = 152
+Cache Hit: Block 53 found in slot 16 (Hits=101, Misses=73)
+Cache Miss: Hit Rate = 57.955%, Miss Rate = 42.045%, Disk Reads = 296, Disk Writes = 152
+Cache Hit: Block 53 found in slot 16 (Hits=102, Misses=74)
+Cache Miss: Hit Rate = 57.865%, Miss Rate = 42.135%, Disk Reads = 300, Disk Writes = 152
+Part 2 PASSED: All 36 KB verified intact after FIFO evictions and disk reloads
+All Question 7 buffer cache tests passed. (exiting will now trigger DfsCacheFlush.
 No runnable processes - exiting!
 Exiting at program request.
-Instructions executed: 6097994
-Time simulated: 6.098 secs
-Real time elapsed: 0.159 secs
-Execution rate: 38.31M simulated instructions per real second.
+Instructions executed: 17109591
+Time simulated: 17.110 secs
+Real time elapsed: 0.453 secs
+Execution rate: 37.73M simulated instructions per real second.

@@ -97,6 +97,13 @@ int FileOpen(char* filename, char* mode) {
   } else if (is_w) {
     // If file already exists in "w" mode, delete the inode first then reopen
     if (inode_handle != DFS_FAIL) {
+      if (DfsInodeDelete(inode_handle) == DFS_FAIL) {
+        LockHandleRelease(files_lock);
+        return FILE_FAIL;
+      }
+    }
+    inode_handle = DfsInodeOpen(filename);
+    if (inode_handle == DFS_FAIL) {
       LockHandleRelease(files_lock);
       return FILE_FAIL;
     }

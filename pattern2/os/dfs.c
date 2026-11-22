@@ -31,7 +31,7 @@ typedef struct dfs_cache_slot {
 
 static dfs_cache_slot cache[DFS_CACHE_SLOTS];
 static Queue free_cache_q;  // Tracks available empty slots
-static Queue fifo_cache_q;  // Tracks allocated slots in FIFO order
+static Queue fifo_cache_q;
 
 static lock_t cache_lock;
 
@@ -64,7 +64,6 @@ void DfsModuleInit() {
   dfs_lock = LockCreate();
   cache_lock = LockCreate();
 
-  // Initialize the empty and active FIFO queues
   AQueueInit(&free_cache_q);
   AQueueInit(&fifo_cache_q);
 
@@ -507,9 +506,9 @@ int DfsCacheFlush() {
         return DFS_FAIL;        
       }
       slot_ptr->dirty = 0;
-      slot_ptr->is_metadata = 0;
     }
 
+    slot_ptr->is_metadata = 0;
     slot_ptr->inuse = 0;
     slot_ptr->blocknum = 0;
 
@@ -1130,7 +1129,6 @@ int DfsCacheHit(int blocknum) {
 
 //-----------------------------------------------------------------
 // Internal unlocked helper for DfsCacheAllocateSlot (caller holds cache_lock)
-// Uses FIFO replacement via free_cache_q and fifo_cache_q
 //-----------------------------------------------------------------
 static int DfsCacheAllocateSlotInternal(int blocknum) {
   Link *link;
@@ -1143,7 +1141,7 @@ static int DfsCacheAllocateSlotInternal(int blocknum) {
     AQueueRemove(&slot_ptr->l);    
   }
   else {
-    // 2. Cache is full, evict the oldest slot from the head of fifo_cache_q
+    // 2. Cache is full
     if (AQueueEmpty(&fifo_cache_q)) {
       return DFS_FAIL;
     }

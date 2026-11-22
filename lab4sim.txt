@@ -16,3 +16,5 @@ dlxsim -D i -x os.dlx.obj -a -D i -u ostests.dlx.obj > ./../log.txt
 dlxsim -D b -x os.dlx.obj -a -D b -u filetest2.dlx.obj > ./../log.txt
 
 dlxsim -D b -x os.dlx.obj -a -D b -u pattern.dlx.obj > ./../log.txt
+
+dlxsim -x os.dlx.obj -a -u pattern.dlx.obj > ./../log.txt

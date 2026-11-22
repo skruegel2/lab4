@@ -1042,8 +1042,8 @@ static void PrintCacheMissStats() {
   }
 
   // Compute percentages scaled by 1000
-  hit_scaled = (cache_hits * 100000 + (total /2)) /total;
-  miss_scaled = (cache_misses * 100000 + (total /2)) /total;
+  hit_scaled = (uint32)((((double)cache_hits * 100000.0) / (double)total) + 0.5);
+  miss_scaled = 100000 - hit_scaled;
 
   printf("Cache Miss: Hit Rate = %d.%03d%%, Miss Rate = %d.%03d%%, Disk Reads = %d, Disk Writes = %d\n",
           hit_scaled / 1000, hit_scaled % 1000,

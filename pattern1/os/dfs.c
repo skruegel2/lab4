@@ -80,6 +80,7 @@ void DfsModuleInit() {
     cache[i].inuse = 0;
     cache[i].dirty = 0;
     cache[i].blocknum = 0;
+    cache[i].last_used = 0;
     cache[i].l = AQueueAllocLink(&cache[i]);
     AQueueInsertLast(&free_cache_q, cache[i].l);
   }
@@ -355,6 +356,7 @@ int DfsFreeBlock(uint32 blocknum) {
     cache[slot].inuse = 0;
     cache[slot].dirty = 0;
     cache[slot].blocknum = 0;
+    cache[slot].last_used = 0;
     cache[slot].l = AQueueAllocLink(&cache[slot]);
     AQueueInsertLast(&free_cache_q, cache[slot].l);    
   }
@@ -396,8 +398,10 @@ int DfsReadBlockUncached(uint32 blocknum, dfs_block *b) {
   return sb.fs_blocksize;
 }
 
+//-----------------------------------------------------------------
 // DfsReadBlock checks the buffer cache for blocknum, loading it
 // from disk on a miss, and copies sb.fs_blocksize bytes into b
+//-----------------------------------------------------------------
 int DfsReadBlock(uint32 blocknum, dfs_block *b) {
   int slot;
 
@@ -412,6 +416,7 @@ int DfsReadBlock(uint32 blocknum, dfs_block *b) {
     dbprintf('b', "Cache Hit: Block %d found in slot %d (Hits=%d, Misses=%d)\n",
         blocknum, slot, cache_hits, cache_misses);
     cache_hits++;    
+    cache[slot].last_used = ++cache_clock;
   }
   else {
     cache_misses++;
@@ -435,9 +440,11 @@ int DfsReadBlock(uint32 blocknum, dfs_block *b) {
   return sb.fs_blocksize;
 }
 
+//-----------------------------------------------------------------
 // DfsWriteBlock checks the buffer cache for blocknum, reading it
 // from disk into the cache on a miss, updates the cached copy, and 
 // marks the slot dirty
+//-----------------------------------------------------------------
 int DfsWriteBlock(uint32 blocknum, dfs_block * b) {
   int slot;
 
@@ -452,6 +459,7 @@ int DfsWriteBlock(uint32 blocknum, dfs_block * b) {
     dbprintf('b', "Cache Hit: Block %d found in slot %d (Hits=%d, Misses=%d)\n",
         blocknum, slot, cache_hits, cache_misses);    
     cache_hits++;
+    cache[slot].last_used = ++cache_clock;
   }
   else {
     cache_misses++;
@@ -477,9 +485,11 @@ int DfsWriteBlock(uint32 blocknum, dfs_block * b) {
   return sb.fs_blocksize;
 }
 
+//-----------------------------------------------------------------
 // DfsCacheFlush writes all dirty cached blocks back to disk and
 // returns all occupied slots to free_cache_q without counting
 // hits or misses.
+//-----------------------------------------------------------------
 int DfsCacheFlush() {
   Link* link;
   dfs_cache_slot* slot_ptr;
@@ -507,6 +517,7 @@ int DfsCacheFlush() {
 
     slot_ptr->inuse = 0;
     slot_ptr->blocknum = 0;
+    slot_ptr->last_used = 0;
 
     slot_ptr->l = AQueueAllocLink(slot_ptr);
     if (slot_ptr->l == NULL || AQueueInsertLast(&free_cache_q, slot_ptr->l) == QUEUE_FAIL) {
@@ -716,9 +727,11 @@ int DfsInodeDelete(uint32 handle) {
   return DFS_SUCCESS;
 }
 
+//-----------------------------------------------------------------
 // DfsInodeRename changes the filename of an existing inode.
 // Returns DFS_FAIL if the old file doesn't exist or the new
 // filename is already taken.
+//-----------------------------------------------------------------
 
 int DfsInodeRename(char* oldname, char* newname)
 {
@@ -1032,9 +1045,11 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
 }
 
  
+//-----------------------------------------------------------------
 // Internal helper: prints cumulative cache miss and disk I/O stats
 // Format: Cache Miss: Hit Rate = XX.XXX%, Miss Rate = XX.XXX%,
 // Disk Reads = N, Disk Writes = M 
+//-----------------------------------------------------------------
 static void PrintCacheMissStats() {
   uint32 total = cache_hits + cache_misses;
   uint32 hit_scaled;
@@ -1054,7 +1069,9 @@ static void PrintCacheMissStats() {
           disk_reads, disk_writes);
 }
 
+//-----------------------------------------------------------------
 // Internal unlocked helpeer for DfsCacheHit (caller holds cache lock)
+//-----------------------------------------------------------------
 static int DfsCacheHitInternal(int blocknum) {
   int i;
 
@@ -1066,8 +1083,10 @@ static int DfsCacheHitInternal(int blocknum) {
   return DFS_FAIL;
 }
 
+//-----------------------------------------------------------------
 // DfsCacheHit checks the cache for the given blocknum.
 // Returns DFS_FAIL if not found, or the slot handle on success
+//-----------------------------------------------------------------
 int DfsCacheHit(int blocknum) {
   int slot;
   if (sb.valid == 0 || blocknum < 0 || (uint32)blocknum >= sb.total_fs_blocks) {
@@ -1081,11 +1100,16 @@ int DfsCacheHit(int blocknum) {
   return slot;
 }
 
+//-----------------------------------------------------------------
 // Internal unlocked helper for DfsCacheAllocateSlot (caller holds cache_lock)
 // Uses FIFO replacement via free_cache_q and fifo_cache_q
+//-----------------------------------------------------------------
 static int DfsCacheAllocateSlotInternal(int blocknum) {
   Link *link;
   dfs_cache_slot *slot_ptr;
+  int i;
+  int victim = -1;
+  uint32 min_time = 0xFFFFFFFF;
 
   if (!AQueueEmpty(&free_cache_q)) {
     // 1. Pull an empty slot from free_cache_q
@@ -1098,14 +1122,27 @@ static int DfsCacheAllocateSlotInternal(int blocknum) {
     if (AQueueEmpty(&fifo_cache_q)) {
       return DFS_FAIL;
     }
-    link = AQueueFirst(&fifo_cache_q);
-    slot_ptr = (dfs_cache_slot*)AQueueObject(link);
+
+    for(i = 0; i < DFS_CACHE_SLOTS; i++) {
+      if (cache[i].inuse == 1) {
+        if (victim == -1 || cache[i].last_used < min_time) {
+          min_time = cache[i].last_used;
+          victim = i;
+        }
+      }
+    }
+
+    if (victim == -1) {
+      return DFS_FAIL;
+    }
+
+    slot_ptr = &cache[victim];
     AQueueRemove(&slot_ptr->l);
 
     // Write back to disk if the evicted block is dirty
     if (slot_ptr->dirty == 1) {
       dbprintf('b', "Cache Evict: Writing back dirty block %d from slot %d\n",
-          slot_ptr->blocknum, slot_ptr->slot_index);      
+        slot_ptr->blocknum, slot_ptr->slot_index);
       if (DfsWriteBlockUncached(slot_ptr->blocknum, &slot_ptr->data) == DFS_FAIL) {
         return DFS_FAIL;
       }
@@ -1117,6 +1154,7 @@ static int DfsCacheAllocateSlotInternal(int blocknum) {
   slot_ptr->inuse = 1;
   slot_ptr->dirty = 0;
   slot_ptr->blocknum = (uint32)blocknum;
+  slot_ptr->last_used == ++cache_clock;
 
   slot_ptr->l = AQueueAllocLink(slot_ptr);
   if ((slot_ptr->l == NULL) || AQueueInsertLast(&fifo_cache_q, slot_ptr->l) == QUEUE_FAIL) {
@@ -1126,6 +1164,8 @@ static int DfsCacheAllocateSlotInternal(int blocknum) {
   return slot_ptr->slot_index;
 }
 
+//-----------------------------------------------------------------
+//-----------------------------------------------------------------
 int DfsCacheAllocateSlot(int blocknum) {
   int slot;
 

@@ -17,6 +17,7 @@
 #include "clock.h"
 #include "traps.h"
 #include "dfs.h"
+#include "files.h"
 
 // Pointer to the current PCB.  This is used by the assembly language
 // routines for context switches.

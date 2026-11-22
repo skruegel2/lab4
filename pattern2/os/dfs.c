@@ -24,6 +24,7 @@ typedef struct dfs_cache_slot {
   int slot_index;   // Index (0..32) in the cache[] array
   int inuse;        // 1 if valid block is cached, 0 if empty
   int dirty;        // 1 if modified and needs write-back, 0 if clean
+  int is_metadata;  // 1 if indirect/double-indirect block 0 if regular data block
   uint32 blocknum;  // DFS filesystem block num
   dfs_block data;   // block payload
 } dfs_cache_slot;
@@ -44,6 +45,8 @@ static uint32 disk_writes = 0;
 static void PrintCacheMissStats();
 static int DfsCacheHitInternal(int blocknum);
 static int DfsCacheAllocateSlotInternal(int blocknum);
+static void DfsCacheTouchMRU(int slot);
+static void DfsMarkBlockMetadata(uint32 blocknum);
 
 ///////////////////////////////////////////////////////////////////
 // Non-inode functions first
@@ -77,6 +80,7 @@ void DfsModuleInit() {
     cache[i].inuse = 0;
     cache[i].dirty = 0;
     cache[i].blocknum = 0;
+    cache[i].is_metadata = 0;
     cache[i].l = AQueueAllocLink(&cache[i]);
     AQueueInsertLast(&free_cache_q, cache[i].l);
   }
@@ -352,6 +356,7 @@ int DfsFreeBlock(uint32 blocknum) {
     cache[slot].inuse = 0;
     cache[slot].dirty = 0;
     cache[slot].blocknum = 0;
+    cache[slot].is_metadata = 0;
     cache[slot].l = AQueueAllocLink(&cache[slot]);
     AQueueInsertLast(&free_cache_q, cache[slot].l);    
   }
@@ -409,6 +414,7 @@ int DfsReadBlock(uint32 blocknum, dfs_block *b) {
     dbprintf('b', "Cache Hit: Block %d found in slot %d (Hits=%d, Misses=%d)\n",
         blocknum, slot, cache_hits, cache_misses);
     cache_hits++;    
+    DfsCacheTouchMRU(slot);
   }
   else {
     cache_misses++;
@@ -449,6 +455,7 @@ int DfsWriteBlock(uint32 blocknum, dfs_block * b) {
     dbprintf('b', "Cache Hit: Block %d found in slot %d (Hits=%d, Misses=%d)\n",
         blocknum, slot, cache_hits, cache_misses);    
     cache_hits++;
+    DfsCacheTouchMRU(slot);
   }
   else {
     cache_misses++;
@@ -500,6 +507,7 @@ int DfsCacheFlush() {
         return DFS_FAIL;        
       }
       slot_ptr->dirty = 0;
+      slot_ptr->is_metadata = 0;
     }
 
     slot_ptr->inuse = 0;
@@ -966,6 +974,8 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
     if (DfsReadBlock(inodes[handle].indirect, &b) == DFS_FAIL) {
       return DFS_FAIL;
     }
+    DfsMarkBlockMetadata(inodes[handle].indirect);
+
 
     table = (int*)b.data;
     table[virtual_blocknum - 10] = new_block;
@@ -995,6 +1005,8 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
   if (DfsReadBlock(inodes[handle].double_indirect, &b) == DFS_FAIL) {
     return DFS_FAIL;
   }
+  DfsMarkBlockMetadata(inodes[handle].double_indirect);
+
   table = (int*)b.data;
   indirect_block = table[single_indirect_index];
 
@@ -1019,6 +1031,8 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
   if (DfsReadBlock(indirect_block, &b) == DFS_FAIL) {
     return DFS_FAIL;
   }
+  DfsMarkBlockMetadata(indirect_block);
+
   table = (int*)b.data;
   table[data_index] = new_block;
 
@@ -1028,10 +1042,11 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
   return new_block;
 }
 
- 
+//-----------------------------------------------------------------
 // Internal helper: prints cumulative cache miss and disk I/O stats
 // Format: Cache Miss: Hit Rate = XX.XXX%, Miss Rate = XX.XXX%,
 // Disk Reads = N, Disk Writes = M 
+//-----------------------------------------------------------------
 static void PrintCacheMissStats() {
   uint32 total = cache_hits + cache_misses;
   uint32 hit_scaled;
@@ -1051,7 +1066,42 @@ static void PrintCacheMissStats() {
           disk_reads, disk_writes);
 }
 
+//-----------------------------------------------------------------
+// Helper function: moves an in-use cache slot to the tail
+//-----------------------------------------------------------------
+static void DfsCacheTouchMRU(int slot) {
+  if (cache[slot].inuse == 0) {
+    return;
+  }
+
+  // Remove from current position in fifo_cache_q (frees old Link)
+  if (cache[slot].l != NULL) {
+    AQueueRemove(&cache[slot].l);
+  }
+
+  // Reallocate link and append to the tail of fifo_cache_q
+  cache[slot].l = AQueueAllocLink(&cache[slot]);
+  if (cache[slot].l == NULL || AQueueInsertLast(&fifo_cache_q, cache[slot].l) == QUEUE_FAIL) {
+    printf("FATAL ERROR: Failed to move slot %d to MRU tail\n", slot);
+  }
+}
+
+//-----------------------------------------------------------------
+// Helper function
+//-----------------------------------------------------------------
+static void DfsMarkBlockMetadata(uint32 blocknum) {
+  int slot;
+  LockHandleAcquire(cache_lock);
+  slot = DfsCacheHitInternal(blocknum);
+  if (slot != DFS_FAIL) {
+    cache[slot].is_metadata = 1;
+  }
+  LockHandleRelease(cache_lock);
+}
+
+//-----------------------------------------------------------------
 // Internal unlocked helpeer for DfsCacheHit (caller holds cache lock)
+//-----------------------------------------------------------------
 static int DfsCacheHitInternal(int blocknum) {
   int i;
 
@@ -1078,8 +1128,10 @@ int DfsCacheHit(int blocknum) {
   return slot;
 }
 
+//-----------------------------------------------------------------
 // Internal unlocked helper for DfsCacheAllocateSlot (caller holds cache_lock)
 // Uses FIFO replacement via free_cache_q and fifo_cache_q
+//-----------------------------------------------------------------
 static int DfsCacheAllocateSlotInternal(int blocknum) {
   Link *link;
   dfs_cache_slot *slot_ptr;
@@ -1095,13 +1147,22 @@ static int DfsCacheAllocateSlotInternal(int blocknum) {
     if (AQueueEmpty(&fifo_cache_q)) {
       return DFS_FAIL;
     }
-    link = AQueueFirst(&fifo_cache_q);
+
+    // Grab the most recently used link
+    link = AQueueLast(&fifo_cache_q);
+
+    // Metadata safeguard
+    while (link != NULL && AQueuePrev(link) != NULL && 
+      ((dfs_cache_slot*)AQueueObject(link))->is_metadata == 1) {
+      link = AQueuePrev(link);
+    }
+
     slot_ptr = (dfs_cache_slot*)AQueueObject(link);
     AQueueRemove(&slot_ptr->l);
 
     // Write back to disk if the evicted block is dirty
     if (slot_ptr->dirty == 1) {
-      dbprintf('b', "Cache Evict: Writing back dirty block %d from slot %d\n",
+      dbprintf('b', "Cache Evict (MRU): Writing back dirty block %d from slot %d\n",
           slot_ptr->blocknum, slot_ptr->slot_index);      
       if (DfsWriteBlockUncached(slot_ptr->blocknum, &slot_ptr->data) == DFS_FAIL) {
         return DFS_FAIL;
@@ -1113,6 +1174,7 @@ static int DfsCacheAllocateSlotInternal(int blocknum) {
   // 3. Initialize slot metadata and append to the tail of the fifo_cache_q
   slot_ptr->inuse = 1;
   slot_ptr->dirty = 0;
+  slot_ptr->is_metadata = 0;  // Reset by default
   slot_ptr->blocknum = (uint32)blocknum;
 
   slot_ptr->l = AQueueAllocLink(slot_ptr);
@@ -1123,6 +1185,9 @@ static int DfsCacheAllocateSlotInternal(int blocknum) {
   return slot_ptr->slot_index;
 }
 
+//-----------------------------------------------------------------
+// DfsCacheAllocateSlot
+//-----------------------------------------------------------------
 int DfsCacheAllocateSlot(int blocknum) {
   int slot;
 
@@ -1182,6 +1247,7 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
     if (DfsReadBlock(inodes[handle].indirect, &b) == DFS_FAIL) {
       return DFS_FAIL;
     }
+    DfsMarkBlockMetadata(inodes[handle].indirect);
 
     // Cast the raw block data into an array of integers
     table = (int*)b.data;
@@ -1201,6 +1267,8 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
   if (DfsReadBlock(inodes[handle].double_indirect, &b) == DFS_FAIL) {
     return DFS_FAIL;
   }
+  DfsMarkBlockMetadata(inodes[handle].double_indirect);
+
 
   table = (int*)b.data;
 
@@ -1217,6 +1285,8 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
   if (DfsReadBlock(indirect_blocknum, &b) == DFS_FAIL) {
     return DFS_FAIL;
   }
+  DfsMarkBlockMetadata(indirect_blocknum);
+
   table = (int*)b.data;
   block_result = table[data_index];
 

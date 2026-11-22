@@ -25,6 +25,7 @@ typedef struct dfs_cache_slot {
   int inuse;        // 1 if valid block is cached, 0 if empty
   int dirty;        // 1 if modified and needs write-back, 0 if clean
   uint32 blocknum;  // DFS filesystem block num
+  uint32 last_used; // logical timestamp for LRU
   dfs_block data;   // block payload
 } dfs_cache_slot;
 
@@ -39,6 +40,7 @@ static uint32 cache_hits = 0;
 static uint32 cache_misses = 0;
 static uint32 disk_reads = 0;
 static uint32 disk_writes = 0;
+static uint32 cache_clock = 0;
 
 // Prototypes
 static void PrintCacheMissStats();
@@ -70,6 +72,7 @@ void DfsModuleInit() {
   cache_misses = 0;
   disk_reads = 0;
   disk_writes = 0;
+  cache_clock = 0;
 
   // Initialize all 32 cache slots and place them in free_cache q
   for (i = 0; i < DFS_CACHE_SLOTS; i++) {

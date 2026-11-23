@@ -1113,6 +1113,10 @@ static int DfsCacheAllocateSlotInternal(int blocknum) {
       return DFS_FAIL;
     }
 
+    curr = AQueueFirst(&fifo_cache_q);
+    slot_ptr = (dfs_cache_slot*)AQueueObject(curr);
+    min_freq = slot_ptr->freq;
+
     curr = AQueueNext(curr);
     while (curr != NULL) {
       candidate = (dfs_cache_slot*)AQueueObject(curr);

@@ -66,7 +66,7 @@ static int DfsCacheAllocateSlotInternal(int blocknum);
 static void DfsMarkBlockMetadata(uint32 blocknum);
 static int SelectVictimSlot(int use_mru, int is_shadow, shadow_slot *s_arr);
 static int StepShadowCache(shadow_slot *s_arr, int use_mru, uint32 blocknum, uint32 now);
-static void DfsAdaptiveObserver(uint32 blocknum, uint32 now);
+static void DfsAdaptiveObserve(uint32 blocknum, uint32 now);
 
 ///////////////////////////////////////////////////////////////////
 // Internal adaptive helpers
@@ -157,6 +157,12 @@ static int SelectVictimSlot(int use_mru, int is_shadow, shadow_slot* s_arr) {
       if (use_mru) {
         // MRU: evict slot with newest timestamp
         if (used > v_used) {
+          victim = i;
+        }
+      }
+      else {
+        // LFU with LRU tiebreaker; evict smallest freq, then oldest timestamp
+        if (freq < v_freq || (freq == v_freq && used < v_used)) {
           victim = i;
         }
       }
@@ -625,8 +631,6 @@ int DfsReadBlock(uint32 blocknum, dfs_block *b) {
 
   slot = DfsCacheHitInternal(blocknum);
   if (slot != DFS_FAIL) {
-    dbprintf('b', "Cache Hit: Block %d found in slot %d (Hits=%d, Misses=%d)\n",
-        blocknum, slot, cache_hits, cache_misses);
     cache_hits++;    
     if (cache[slot].freq < 0xFFFF0000) {
       cache[slot].freq++;
@@ -1199,6 +1203,7 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
         DfsFreeBlock(new_block);
         return DFS_FAIL;
       }
+      DfsMarkBlockMetadata(inodes[handle].indirect);
     }
 
     // Read the indirect block, update the table, and write it back
@@ -1307,7 +1312,7 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
   uint32 max_vblocks;
 
   // Check that the file system has been loaded and is valid.
-  if (sb.valid == 0 || handle > (uint32)sb.num_inodes || inodes[handle].inuse == 0) {
+  if (sb.valid == 0 || handle >= (uint32)sb.num_inodes || inodes[handle].inuse == 0) {
     return DFS_FAIL;
   }  
 
@@ -1473,7 +1478,7 @@ static int DfsCacheAllocateSlotInternal(int blocknum) {
   dfs_cache_slot *slot_ptr;
 
   // Choose the currently winning policy
-  use_mru = (score_mru > score_lfu) ? : 0;
+  use_mru = (score_mru > score_lfu) ? 1 : 0;
   victim = SelectVictimSlot(use_mru, 0, NULL);
   slot_ptr = &cache[victim];
 

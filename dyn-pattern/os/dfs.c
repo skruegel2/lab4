@@ -208,7 +208,7 @@ int DfsFreeBlock(uint32 blocknum) {
 
   // Acquire lock before modifying fbv
   LockHandleAcquire(dfs_lock);
-  result = DfsFreeBlockInternal(dfs_lock);
+  result = DfsFreeBlockInternal(blocknum);
   LockHandleRelease(dfs_lock);
   return result;
 }
@@ -818,6 +818,7 @@ int DfsInodeFilenameExists(char *filename) {
   for(i = 0; i < sb.num_inodes; i++) {
     if (inodes[i].inuse == 1) {
       if (dstrncmp(inodes[i].filename, filename, FILE_MAX_FILENAME_LENGTH) == 0) {
+        LockHandleRelease(dfs_lock);
         return i; // Return the inode array index as the handle
       }
     }
@@ -937,7 +938,7 @@ int DfsInodeDelete(uint32 handle) {
 
   // 2. Free all allocated data blocks
   for (i = 0; i < max_vblocks; i++) {
-    phys_block = DfsInodeTranslateVirtualToFilesys(handle, i);
+    phys_block = DfsInodeTranslateInternal(handle, i);
     if (phys_block != DFS_FAIL && phys_block != 0) {
       DfsFreeBlockInternal(phys_block);
     }    
@@ -1079,7 +1080,7 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
       bytes_to_read = num_bytes;
     }
 
-    physical_block = DfsInodeTranslateVirtualToFilesys(handle, virtual_block);
+    physical_block = DfsInodeTranslateInternal(handle, virtual_block);
     if (physical_block == DFS_FAIL) {
       // Sparse hole 
       bzero(dest + bytes_read, bytes_to_read);

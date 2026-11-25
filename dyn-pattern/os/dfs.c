@@ -1504,19 +1504,23 @@ static void PrintCacheMissStats() {
   uint32 total = cache_hits + cache_misses;
   uint32 hit_scaled;
   uint32 miss_scaled;
+  static int miss_count = 0;
 
   if (total == 0) {
     return;
   }
+  miss_count++;
+  if ((miss_count % 500) == 0) {
+    miss_count = 0;
+    // Compute percentages scaled by 1000
+    hit_scaled = (uint32)((((double)cache_hits * 100000.0) / (double)total) + 0.5);
+    miss_scaled = 100000 - hit_scaled;
 
-  // Compute percentages scaled by 1000
-  hit_scaled = (uint32)((((double)cache_hits * 100000.0) / (double)total) + 0.5);
-  miss_scaled = 100000 - hit_scaled;
-
-  printf("Cache Miss: Hit Rate = %d.%03d%%, Miss Rate = %d.%03d%%, Disk Reads = %d, Disk Writes = %d\n",
-          hit_scaled / 1000, hit_scaled % 1000,
-          miss_scaled / 1000, miss_scaled % 1000,
-          disk_reads, disk_writes);
+    printf("Cache Miss: Hit Rate = %d.%03d%%, Miss Rate = %d.%03d%%, Disk Reads = %d, Disk Writes = %d\n",
+            hit_scaled / 1000, hit_scaled % 1000,
+            miss_scaled / 1000, miss_scaled % 1000,
+            disk_reads, disk_writes);
+  }
 }
 
 //-----------------------------------------------------------------

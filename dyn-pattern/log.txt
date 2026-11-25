@@ -61,4 +61,72 @@ Cache Miss: Hit Rate = 98.832%, Miss Rate = 1.168%, Disk Reads = 90000, Disk Wri
 cachtest: Pattern 3 complete. Total errors: 0
 cachtest: Starting Pattern 2
 Cache Miss: Hit Rate = 98.940%, Miss Rate = 1.060%, Disk Reads = 92000, Disk Writes = 8192
-Got a control-C: exiting!
+Cache Miss: Hit Rate = 99.038%, Miss Rate = 0.962%, Disk Reads = 94000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.119%, Miss Rate = 0.881%, Disk Reads = 96000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.183%, Miss Rate = 0.817%, Disk Reads = 98000, Disk Writes = 8192
+cachtest: Pattern 2 complete. Total errors: 0
+cachtest: Starting Pattern 1
+Cache Miss: Hit Rate = 99.236%, Miss Rate = 0.764%, Disk Reads = 100000, Disk Writes = 8192
+cachtest: Pattern 1 complete. Total errors: 0
+cachtest: Starting Pattern 3
+Cache Miss: Hit Rate = 99.238%, Miss Rate = 0.762%, Disk Reads = 102000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.225%, Miss Rate = 0.775%, Disk Reads = 104000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.212%, Miss Rate = 0.788%, Disk Reads = 106000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.199%, Miss Rate = 0.801%, Disk Reads = 108000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.187%, Miss Rate = 0.813%, Disk Reads = 110000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.174%, Miss Rate = 0.826%, Disk Reads = 112000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.161%, Miss Rate = 0.839%, Disk Reads = 114000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.149%, Miss Rate = 0.851%, Disk Reads = 116000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.136%, Miss Rate = 0.864%, Disk Reads = 118000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.124%, Miss Rate = 0.876%, Disk Reads = 120000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.111%, Miss Rate = 0.889%, Disk Reads = 122000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.099%, Miss Rate = 0.901%, Disk Reads = 124000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.087%, Miss Rate = 0.913%, Disk Reads = 126000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.075%, Miss Rate = 0.925%, Disk Reads = 128000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.063%, Miss Rate = 0.937%, Disk Reads = 130000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.051%, Miss Rate = 0.949%, Disk Reads = 132000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.038%, Miss Rate = 0.962%, Disk Reads = 134000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.026%, Miss Rate = 0.974%, Disk Reads = 136000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.014%, Miss Rate = 0.986%, Disk Reads = 138000, Disk Writes = 8192
+Cache Miss: Hit Rate = 99.003%, Miss Rate = 0.997%, Disk Reads = 140000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.991%, Miss Rate = 1.009%, Disk Reads = 142000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.979%, Miss Rate = 1.021%, Disk Reads = 144000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.968%, Miss Rate = 1.032%, Disk Reads = 146000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.956%, Miss Rate = 1.044%, Disk Reads = 148000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.945%, Miss Rate = 1.055%, Disk Reads = 150000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.933%, Miss Rate = 1.067%, Disk Reads = 152000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.922%, Miss Rate = 1.078%, Disk Reads = 154000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.910%, Miss Rate = 1.090%, Disk Reads = 156000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.899%, Miss Rate = 1.101%, Disk Reads = 158000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.888%, Miss Rate = 1.112%, Disk Reads = 160000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.877%, Miss Rate = 1.123%, Disk Reads = 162000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.865%, Miss Rate = 1.135%, Disk Reads = 164000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.854%, Miss Rate = 1.146%, Disk Reads = 166000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.843%, Miss Rate = 1.157%, Disk Reads = 168000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.832%, Miss Rate = 1.168%, Disk Reads = 170000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.821%, Miss Rate = 1.179%, Disk Reads = 172000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.811%, Miss Rate = 1.189%, Disk Reads = 174000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.800%, Miss Rate = 1.200%, Disk Reads = 176000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.789%, Miss Rate = 1.211%, Disk Reads = 178000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.778%, Miss Rate = 1.222%, Disk Reads = 180000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.767%, Miss Rate = 1.233%, Disk Reads = 182000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.757%, Miss Rate = 1.243%, Disk Reads = 184000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.746%, Miss Rate = 1.254%, Disk Reads = 186000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.736%, Miss Rate = 1.264%, Disk Reads = 188000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.725%, Miss Rate = 1.275%, Disk Reads = 190000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.715%, Miss Rate = 1.285%, Disk Reads = 192000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.705%, Miss Rate = 1.295%, Disk Reads = 194000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.694%, Miss Rate = 1.306%, Disk Reads = 196000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.684%, Miss Rate = 1.316%, Disk Reads = 198000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.674%, Miss Rate = 1.326%, Disk Reads = 200000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.663%, Miss Rate = 1.337%, Disk Reads = 202000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.653%, Miss Rate = 1.347%, Disk Reads = 204000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.643%, Miss Rate = 1.357%, Disk Reads = 206000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.633%, Miss Rate = 1.367%, Disk Reads = 208000, Disk Writes = 8192
+Cache Miss: Hit Rate = 98.623%, Miss Rate = 1.377%, Disk Reads = 210000, Disk Writes = 8192
+Got an unrecognized system interrupt (0x4) - exiting!
+Exiting at program request.
+Instructions executed: 82868259203
+Time simulated: 82868.259 secs
+Real time elapsed: 1979.073 secs
+Execution rate: 41.87M simulated instructions per real second.

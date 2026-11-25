@@ -49,6 +49,7 @@ static shadow_slot shadow_mru[DFS_CACHE_SLOTS];
 // Adaptive state variables
 static uint32 access_clock = 0;
 static uint32 miss_since_decay = 0;
+static uint32 shadow_lfu_misses = 0;  // Independent aging counter for lfu
 static uint32 score_lfu = 1024; // Slight initial pref for LFU/LRU
 static uint32 score_mru = 1024;
 
@@ -80,6 +81,7 @@ static void DfsCacheResetStateInternal() {
 
   access_clock = 0;
   miss_since_decay = 0;
+  shadow_lfu_misses = 0;
   score_lfu = 1024;
   score_mru = 1024;
 
@@ -136,7 +138,7 @@ static int SelectVictimSlot(int use_mru, int is_shadow, shadow_slot* s_arr) {
   }
 
   // Safeguard indirect/double-indirect blocks unless metadata exceeds MAX_PINNED_METADATA 
-  skip_meta = (meta_count < MAX_PINNED_METADATA) ? 1: 0;
+  skip_meta = (meta_count <= MAX_PINNED_METADATA) ? 1: 0;
 
   for (i = 0; i < DFS_CACHE_SLOTS; i++) {
     meta = is_shadow ? s_arr[i].is_metadata : cache[i].is_metadata;
@@ -190,10 +192,14 @@ static int StepShadowCache(shadow_slot *s_arr, int use_mru, uint32 blocknum, uin
   }
 
   // Age LFU shadow freqs at the same cadence as the real cache
-  if (!use_mru && ((miss_since_decay + 1) >= AGING_MISS_INTERVAL)) {
-    for (i = 0; i < DFS_CACHE_SLOTS; i++) {
-      if (s_arr[i].inuse && s_arr[i].freq > 1) {
-        s_arr[i].freq >>= 1;
+  if (!use_mru) {
+    shadow_lfu_misses++;
+    if (shadow_lfu_misses >= AGING_MISS_INTERVAL) {
+      shadow_lfu_misses = 0;
+      for (i = 0; i < DFS_CACHE_SLOTS; i++) {
+        if (s_arr[i].inuse && s_arr[i].freq > 1) {
+          s_arr[i].freq >>= 1;
+        }
       }
     }
   }
@@ -948,7 +954,7 @@ int DfsInodeDelete(uint32 handle) {
 //-----------------------------------------------------------------
 int DfsInodeRename(char* oldname, char* newname)
 {
-  int handle;
+  int handle = DFS_FAIL;
   int i;
 
   // Validate filesystem
@@ -956,21 +962,30 @@ int DfsInodeRename(char* oldname, char* newname)
     return DFS_FAIL;
   }
 
-  // Ensure the new filename isn't already in use
-  if (DfsInodeFilenameExists(newname) != DFS_FAIL) {
-    return DFS_FAIL;
-  }
-
-  // Find the existing file
-  handle = DfsInodeFilenameExists(oldname);
-  if (handle == DFS_FAIL) {
-    return DFS_FAIL;
-  }
-
   // Acquire lock to safely modify the inode data
   LockHandleAcquire(dfs_lock);
 
-  for(i = 0; i < FILE_MAX_FILENAME_LENGTH; i++) {
+  for (i = 0; i < sb.num_inodes; i++) {
+    if (inodes[i].inuse == 1) {
+      // Fail if newname is already taken by an existing file
+      if (dstrncmp(inodes[i].filename, newname, FILE_MAX_FILENAME_LENGTH) == 0) {
+        LockHandleRelease(dfs_lock);
+        return DFS_FAIL;
+      }
+      // Record handle if oldname matches
+      if (dstrncmp(inodes[i].filename, oldname, FILE_MAX_FILENAME_LENGTH) == 0) {
+        handle = i;
+      }
+    }
+  }
+
+  // Fail i f oldname not found
+  if (handle == DFS_FAIL) {
+    LockHandleRelease(dfs_lock);
+    return DFS_FAIL;
+  }
+
+  for (i = 0; i < FILE_MAX_FILENAME_LENGTH; i++) {
     inodes[handle].filename[i] = newname[i];
     if (newname[i] == '\0') {
       break;
@@ -1473,9 +1488,20 @@ int DfsCacheHit(int blocknum) {
 // Internal unlocked helper for DfsCacheAllocateSlot (caller holds cache_lock)
 //-----------------------------------------------------------------
 static int DfsCacheAllocateSlotInternal(int blocknum) {
+  int existing;
   int use_mru;
   int victim;
   dfs_cache_slot *slot_ptr;
+
+  // Guard against duplicate entries
+  existing = DfsCacheHitInternal(blocknum);
+  if (existing != DFS_FAIL) {
+    if (cache[existing].freq < 0xFFFF0000) {
+      cache[existing].freq++;
+    }
+    cache[existing].last_used = access_clock;
+    return cache[existing].slot_index;
+  }
 
   // Choose the currently winning policy
   use_mru = (score_mru > score_lfu) ? 1 : 0;

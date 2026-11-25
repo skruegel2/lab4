@@ -1,6 +1,6 @@
-Stack=0x1fffd4, pc starting at 0x18d74
+Stack=0x1fffd4, pc starting at 0x19044
 Got 2 arguments.
-Available memory: 0x39870 -> 0x200000.
+Available memory: 0x39878 -> 0x200000.
 Argument count is 2.
 Argument 0 is -u.
 Argument 1 is pattern.dlx.obj.
@@ -52848,7 +52848,7 @@ Cache Miss: Hit Rate = 98.616%, Miss Rate = 1.384%, Disk Reads = 211304, Disk Wr
 Cache Miss: Hit Rate = 98.616%, Miss Rate = 1.384%, Disk Reads = 211308, Disk Writes = 8192
 Got an unrecognized system interrupt (0x4) - exiting!
 Exiting at program request.
-Instructions executed: 79250088119
-Time simulated: 79250.088 secs
-Real time elapsed: 1929.913 secs
-Execution rate: 41.06M simulated instructions per real second.
+Instructions executed: 79313374171
+Time simulated: 79313.374 secs
+Real time elapsed: 1900.112 secs
+Execution rate: 41.74M simulated instructions per real second.

@@ -68,10 +68,150 @@ static void DfsMarkBlockMetadata(uint32 blocknum);
 static int SelectVictimSlot(int use_mru, int is_shadow, shadow_slot *s_arr);
 static int StepShadowCache(shadow_slot *s_arr, int use_mru, uint32 blocknum, uint32 now);
 static void DfsAdaptiveObserve(uint32 blocknum, uint32 now);
+static int DfsAllocateBlockInternal();
+static int DfsFreeBlockInternal(uint32 blocknum);
+static int DfsInodeAllocateVirtualBlockInternal(uint32 handle, uint32 virtual_blocknum);
+static int DfsInodeTranslateInternal(uint32 handle, uint32 virtual_blocknum);
 
 ///////////////////////////////////////////////////////////////////
 // Internal adaptive helpers
 ///////////////////////////////////////////////////////////////////
+
+//-----------------------------------------------------------------
+// Internal unlocked helper for DfsAllocateBlock
+//-----------------------------------------------------------------
+static int DfsAllocateBlockInternal() {
+  int i;
+  int j;
+  uint32 blocknum = DFS_FAIL;
+  uint32 mask;
+  uint32 total_fbv_ints;
+
+  // Find the first free block using the fbv, mark it in use
+  total_fbv_ints = sb.total_fs_blocks / 32;
+
+  for (i = 0; i < total_fbv_ints; i++) {
+    // If the integer is not completely full of 1s
+    if (fbv[i] != 0xFFFFFFFF) {
+      // Find the exact bit that is 0
+      for (j = 0; j < 32; j++) {
+        mask = (1 << j);
+        if ((fbv[i] & mask) == 0) {
+          // Bit is 0 (free).  Mark it as 1 (in use)
+          fbv[i] |= mask;
+          blocknum = (i * 32) + j;
+          break;
+        }
+      }
+      // Since we found and allocated a block, break
+      if (blocknum != DFS_FAIL) {
+        break;
+      }
+    }
+  }
+  return blocknum;
+}
+
+//-----------------------------------------------------------------
+// DfsAllocateBlock allocates a DFS block for use.
+//-----------------------------------------------------------------
+int DfsAllocateBlock() {
+  uint32 blocknum;
+
+  // Check that file system had been loaded correctly into memory
+  if (sb.valid == 0) {
+    return DFS_FAIL;    
+  }
+
+  // Acquire the lock before reading the shared fbv
+  LockHandleAcquire(dfs_lock);
+  blocknum = DfsAllocateBlockInternal();
+  // Release the lock after modifying
+  LockHandleRelease(dfs_lock);
+
+  // Return handle or DFS_FAIL
+  return blocknum;
+}
+
+//-----------------------------------------------------------------
+// Internal unlocked helper for DfsFreeBlock
+//-----------------------------------------------------------------
+static int DfsFreeBlockInternal(uint32 blocknum) {
+  uint32 array_index;
+  uint32 bit_index;
+  uint32 mask;
+  int slot;
+  int i;
+
+  // Ensure the block number is within valid bounds
+  if (blocknum >= sb.total_fs_blocks) {
+    return DFS_FAIL;
+  }
+
+  array_index = blocknum / 32;
+  bit_index = blocknum % 32;
+
+  // Create a mask with a 0 at the target bits and 1 everywhere else
+  // Use provided invert function
+  mask = invert(1 << bit_index);
+
+  // Use bitwise and
+  fbv[array_index] &= mask;
+
+  // Evict and discard if this freed block is currently in buffer cache
+  LockHandleAcquire(cache_lock);
+  slot = DfsCacheHitInternal(blocknum);
+  if (slot != DFS_FAIL) {
+    cache[slot].inuse = 0;
+    cache[slot].dirty = 0;
+    cache[slot].is_metadata = 0;
+    cache[slot].blocknum = 0;
+    cache[slot].freq = 0;
+    cache[slot].last_used = 0;
+  }
+  for (i = 0; i < DFS_CACHE_SLOTS; i++) {
+    if (shadow_lfu[i].inuse && shadow_lfu[i].blocknum == blocknum) {
+      shadow_lfu[i].inuse = 0;
+      shadow_lfu[i].is_metadata = 0;
+      shadow_lfu[i].blocknum = 0;
+      shadow_lfu[i].freq = 0;
+      shadow_lfu[i].last_used = 0;
+    }
+    if (shadow_mru[i].inuse && shadow_mru[i].blocknum == blocknum) {
+      shadow_mru[i].inuse = 0;
+      shadow_mru[i].is_metadata = 0;
+      shadow_mru[i].blocknum = 0;
+      shadow_mru[i].freq = 0;
+      shadow_mru[i].last_used = 0;
+    }
+  }
+  LockHandleRelease(cache_lock);
+  return DFS_SUCCESS;
+}
+
+
+//-----------------------------------------------------------------
+// DfsFreeBlock deallocates a DFS block.
+//-----------------------------------------------------------------
+int DfsFreeBlock(uint32 blocknum) {
+  int result;
+
+  // Check that the file system has been correctly loaded into memory
+  if (sb.valid == 0) {
+    return DFS_FAIL;
+  }
+
+  // Ensure the block number is within valid bounds
+  if (blocknum >= sb.total_fs_blocks) {
+    return DFS_FAIL;
+  }
+
+  // Acquire lock before modifying fbv
+  LockHandleAcquire(dfs_lock);
+  result = DfsFreeBlockInternal(dfs_lock);
+  LockHandleRelease(dfs_lock);
+  return result;
+}
 
 //-----------------------------------------------------------------
 // Resets real cache, shadow cache, and adaptive scores
@@ -435,124 +575,6 @@ int DfsCloseFileSystem() {
   return DFS_SUCCESS;  
 }
 
-
-//-----------------------------------------------------------------
-// DfsAllocateBlock allocates a DFS block for use.
-//-----------------------------------------------------------------
-int DfsAllocateBlock() {
-  int i;
-  int j;
-  uint32 blocknum = DFS_FAIL;
-  uint32 mask;
-  uint32 total_fbv_ints;
-
-  // Check that file system had been loaded correctly into memory
-  if (sb.valid == 0) {
-    return DFS_FAIL;    
-  }
-
-  // Find the first free block using the fbv, mark it in use
-  total_fbv_ints = sb.total_fs_blocks / 32;
-
-  // Acquire lock before reading the shared fbv
-  LockHandleAcquire(dfs_lock);
-
-  for (i = 0; i < total_fbv_ints; i++) {
-    // If the integer is not completely full of 1s
-    if (fbv[i] != 0xFFFFFFFF) {
-      // Find the exact bit that is 0
-      for (j = 0; j < 32; j++) {
-        mask = (1 << j);
-        if ((fbv[i] & mask) == 0) {
-          // Bit is 0 (free).  Mark it as 1 (in-use)
-          fbv[i] |= mask;
-          blocknum = (i * 32) + j;
-          break;
-        }
-      }
-      // Since we found and allocated a block, break out of outer loop
-      if (blocknum != DFS_FAIL) {
-        break;
-      }
-    }
-  }
-
-  // Release the lock after modifying
-  LockHandleRelease(dfs_lock);
-
-  // Return handle or DFS_FAIL
-  return blocknum;
-}
-
-
-//-----------------------------------------------------------------
-// DfsFreeBlock deallocates a DFS block.
-//-----------------------------------------------------------------
-int DfsFreeBlock(uint32 blocknum) {
-  uint32 array_index;
-  uint32 bit_index;
-  uint32 mask;
-  int slot;
-  int i;
-
-  // Check that the file system has been correctly loaded into memory
-  if (sb.valid == 0) {
-    return DFS_FAIL;
-  }
-
-  // Ensure the block number is within valid bounds
-  if (blocknum >= sb.total_fs_blocks) {
-    return DFS_FAIL;
-  }
-
-  array_index = blocknum / 32;
-  bit_index = blocknum % 32;
-
-  // Create a mask with a 0 at the target bits and 1 everywhere else
-  // Use provided invert() function
-  mask = invert(1 << bit_index);
-
-  // Acquire lock before modifying fbv
-  LockHandleAcquire(dfs_lock);
-
-  // Use bitwise AND to clear the specific bit to 0 (free)
-  fbv[array_index] &= mask;
-
-  // Release lock
-  LockHandleRelease(dfs_lock);
-
-  // Evict and discard if this freed block is currently in the buffer cache
-  LockHandleAcquire(cache_lock);
-  slot = DfsCacheHitInternal(blocknum);
-  if (slot != DFS_FAIL) {
-    cache[slot].inuse = 0;
-    cache[slot].dirty = 0;
-    cache[slot].is_metadata = 0;
-    cache[slot].blocknum = 0;
-    cache[slot].freq = 0;
-    cache[slot].last_used = 0;
-  }
-  for (i = 0; i < DFS_CACHE_SLOTS; i++) {
-    if (shadow_lfu[i].inuse && shadow_lfu[i].blocknum == blocknum) {
-      shadow_lfu[i].inuse = 0;
-      shadow_lfu[i].is_metadata = 0;
-      shadow_lfu[i].blocknum = 0;
-      shadow_lfu[i].freq = 0;
-      shadow_lfu[i].last_used = 0;
-    }
-    if (shadow_mru[i].inuse && shadow_mru[i].blocknum == blocknum) {
-      shadow_mru[i].inuse = 0;
-      shadow_mru[i].is_metadata = 0;
-      shadow_mru[i].blocknum = 0;
-      shadow_mru[i].freq = 0;
-      shadow_mru[i].last_used = 0;
-    }
-  }
-  LockHandleRelease(cache_lock);
-  return DFS_SUCCESS;
-}
-
-
 //-----------------------------------------------------------------
 // DfsReadBlockUncached reads an allocated DFS block directly from
 // the physical disk and increments disk_reads per physical block.
@@ -790,6 +812,8 @@ int DfsInodeFilenameExists(char *filename) {
     return DFS_FAIL;
   }
 
+  LockHandleAcquire(dfs_lock);
+
   // Iterate through all allocated inodes to find a matching filename
   for(i = 0; i < sb.num_inodes; i++) {
     if (inodes[i].inuse == 1) {
@@ -799,9 +823,9 @@ int DfsInodeFilenameExists(char *filename) {
     }
   }
 
+  LockHandleRelease(dfs_lock);
   return DFS_FAIL;
 }
-
 
 //-----------------------------------------------------------------
 // DfsInodeOpen: search the list of all inuse inodes for the 
@@ -893,6 +917,13 @@ int DfsInodeDelete(uint32 handle) {
     return DFS_FAIL;
   } 
 
+  LockHandleAcquire(dfs_lock);
+
+  if (inodes[handle].inuse == 0) {
+    LockHandleRelease(dfs_lock);
+    return DFS_FAIL;
+  }
+
   entries_per_block = sb.fs_blocksize / sizeof(int);
 
   // 1. Calculate the max number of virtual blocks used by the file
@@ -908,13 +939,13 @@ int DfsInodeDelete(uint32 handle) {
   for (i = 0; i < max_vblocks; i++) {
     phys_block = DfsInodeTranslateVirtualToFilesys(handle, i);
     if (phys_block != DFS_FAIL && phys_block != 0) {
-      DfsFreeBlock(phys_block);
+      DfsFreeBlockInternal(phys_block);
     }    
   }
 
   // 3. Free the single indirect table itself
   if (inodes[handle].indirect != 0) {
-    DfsFreeBlock(inodes[handle].indirect);
+    DfsFreeBlockInternal(inodes[handle].indirect);
   }
 
   // 4. Free the double indirect table blocks
@@ -925,16 +956,15 @@ int DfsInodeDelete(uint32 handle) {
       // The table holds DFS_BLOCKSIZE / 4 bytes = 256 entries
       for(i = 0; i < entries_per_block; i++) {
         if (table[i] != 0) {
-          DfsFreeBlock(table[i]);
+          DfsFreeBlockInternal(table[i]);
         }
       }
     }
     // Free the top-level table block
-    DfsFreeBlock(inodes[handle].double_indirect);
+    DfsFreeBlockInternal(inodes[handle].double_indirect);
   }
 
   // 5. Mark the inodes as free
-  LockHandleAcquire(dfs_lock);
   inodes[handle].file_size = 0;
   for (i = 0; i < 10; i++) {
     inodes[handle].direct[i] = 0;
@@ -942,6 +972,7 @@ int DfsInodeDelete(uint32 handle) {
   inodes[handle].indirect = 0;
   inodes[handle].double_indirect = 0;
   inodes[handle].inuse = 0;
+
   LockHandleRelease(dfs_lock);
 
   return DFS_SUCCESS;
@@ -1017,12 +1048,20 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
 
   // Validate filesystem and inode
   if (sb.valid == 0 || mem == NULL || start_byte < 0 || num_bytes < 0 ||
-    handle >= sb.num_inodes || inodes[handle].inuse == 0) {
+    handle >= sb.num_inodes) {
+    return DFS_FAIL;
+  }
+
+  LockHandleAcquire(dfs_lock);
+
+  if (inodes[handle].inuse == 0) {
+    LockHandleRelease(dfs_lock);
     return DFS_FAIL;
   }
 
   // Prevent reading past the actual file size
   if (start_byte >= inodes[handle].file_size) {
+    LockHandleRelease(dfs_lock);
     return 0;     // EOF reached
   }
 
@@ -1047,6 +1086,7 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
     }
     else {
       if (DfsReadBlock(physical_block, &b) == DFS_FAIL) {
+        LockHandleRelease(dfs_lock);
         return DFS_FAIL;
       }
       bcopy(b.data + offset, dest + bytes_read, bytes_to_read);
@@ -1057,6 +1097,7 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
     num_bytes -= bytes_to_read;
   }
 
+  LockHandleRelease(dfs_lock);
   return bytes_read;
 }
 
@@ -1082,7 +1123,14 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
 
   // Validate filesystem and inode
   if (sb.valid == 0 || mem == NULL || start_byte < 0 || num_bytes < 0 ||
-     handle >= sb.num_inodes || inodes[handle].inuse == 0) {
+     handle >= sb.num_inodes) {
+    return DFS_FAIL;
+  }
+
+  LockHandleAcquire(dfs_lock);
+
+  if (inodes[handle].inuse == 0) {
+    LockHandleRelease(dfs_lock);
     return DFS_FAIL;
   }
 
@@ -1096,11 +1144,12 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
     }
 
     // Check whether this virutual block existed prior to allocation
-    existing_block = DfsInodeTranslateVirtualToFilesys(handle, virtual_block);
+    existing_block = DfsInodeTranslateInternal(handle, virtual_block);
 
     // Allocate or translate the virtual block to a physical DFS block
-    physical_block = DfsInodeAllocateVirtualBlock(handle, virtual_block);
+    physical_block = DfsInodeAllocateVirtualBlockInternal(handle, virtual_block);
     if (physical_block == DFS_FAIL) {
+      LockHandleRelease(dfs_lock);
       return DFS_FAIL;
     }
 
@@ -1108,6 +1157,7 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
     if (bytes_to_write < sb.fs_blocksize) {
       if (existing_block != DFS_FAIL) {
         if (DfsReadBlock(physical_block, &b) == DFS_FAIL) {
+          LockHandleRelease(dfs_lock);
           return DFS_FAIL;
         }
       }
@@ -1120,6 +1170,7 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
     bcopy(src + bytes_written, b.data + offset, bytes_to_write);
 
     if (DfsWriteBlock(physical_block, &b) == DFS_FAIL) {
+      LockHandleRelease(dfs_lock);
       return DFS_FAIL;
     }
 
@@ -1133,9 +1184,9 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
     }
   }
 
+  LockHandleRelease(dfs_lock);
   return bytes_written;
 }
-
 
 //-----------------------------------------------------------------
 // DfsInodeFilesize simply returns the size of an inode's file. 
@@ -1143,25 +1194,28 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
 // been written to the inode thus far. Return DFS_FAIL on failure.
 //-----------------------------------------------------------------
 int DfsInodeFilesize(uint32 handle) {
+  int size;
+
   // Validate filesystem and inode handle
-  if (sb.valid == 0 || handle >= sb.num_inodes || inodes[handle].inuse == 0) {
+  if (sb.valid == 0 || handle >= sb.num_inodes) {
     return DFS_FAIL;
   }
 
-  return inodes[handle].file_size;
+  LockHandleAcquire(dfs_lock);
+  if (inodes[handle].inuse ==0) {
+    LockHandleRelease(dfs_lock);
+    return DFS_FAIL;
+  }
+
+  size = inodes[handle].file_size;
+  LockHandleRelease(dfs_lock);
+  return size;
 }
 
-
 //-----------------------------------------------------------------
-// DfsInodeAllocateVirtualBlock allocates a new filesystem block 
-// for the given inode, storing its blocknumber at index 
-// virtual_blocknumber in the translation table. If the 
-// virtual_blocknumber resides in the indirect address space, and 
-// there is not an allocated indirect addressing table, allocate it. 
-// Return DFS_FAIL on failure, and the newly allocated file system 
-// block number on success.
+// Internal unlocked helper for DfsInodeAllocateVirtualBlock
 //-----------------------------------------------------------------
-int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
+static int DfsInodeAllocateVirtualBlockInternal(uint32 handle, uint32 virtual_blocknum) {
   dfs_block b;
   int* table;
   uint32 new_block;
@@ -1171,28 +1225,26 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
   uint32 entries_per_block;
   uint32 max_vblocks;
 
-  // Check that the file system has been loaded and is valid.
-  if (sb.valid == 0 || handle >= (uint32)sb.num_inodes || inodes[handle].inuse == 0) {
+  if (inodes[handle].inuse == 0) {
     return DFS_FAIL;
-  }   
+  }
 
   entries_per_block = sb.fs_blocksize / sizeof(int);
   max_vblocks = 10 + entries_per_block + (entries_per_block * entries_per_block);
-
   if (virtual_blocknum >= max_vblocks) {
     return DFS_FAIL;
   }
 
   // Return existing block if already allocated
-  new_block = DfsInodeTranslateVirtualToFilesys(handle, virtual_blocknum);
+  new_block = DfsInodeTranslateInternal(handle, virtual_blocknum);
   if (new_block != DFS_FAIL) {
     return new_block;
   }
 
   // Allocate a new data block for the file
-  new_block = DfsAllocateBlock();
+  new_block = DfsAllocateBlockInternal();
   if (new_block == DFS_FAIL) {
-    return DFS_FAIL;  // Disk is full
+    return DFS_FAIL;    // Disk is full
   }
 
   // 1. Direct addressing (virtual blocks 0 to 9)
@@ -1201,21 +1253,21 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
     return new_block;
   }
 
-  // 2. Single indirect addressing 
+  // 2. Single indirect addresssing
   if (virtual_blocknum < (10 + entries_per_block)) {
     if (inodes[handle].indirect == 0) {
       // Allocate the single indirect table block
-      inodes[handle].indirect = DfsAllocateBlock();
+      inodes[handle].indirect = DfsAllocateBlockInternal();
       if (inodes[handle].indirect == DFS_FAIL) {
-        DfsFreeBlock(new_block);  // Rollback data allocation
+        DfsFreeBlockInternal(new_block);    // Rollback data allocation
         return DFS_FAIL;
       }
       // Zero out the newly created indirect block
       bzero(b.data, sb.fs_blocksize);
       if (DfsWriteBlock(inodes[handle].indirect, &b) == DFS_FAIL) {
-        DfsFreeBlock(inodes[handle].indirect);
+        DfsFreeBlockInternal(inodes[handle].indirect);
         inodes[handle].indirect = 0;
-        DfsFreeBlock(new_block);
+        DfsFreeBlockInternal(new_block);
         return DFS_FAIL;
       }
       DfsMarkBlockMetadata(inodes[handle].indirect);
@@ -1227,7 +1279,6 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
     }
     DfsMarkBlockMetadata(inodes[handle].indirect);
 
-
     table = (int*)b.data;
     table[virtual_blocknum - 10] = new_block;
 
@@ -1238,55 +1289,54 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
     return new_block;
   }
 
-  // 3. Double indirect addressing 
+  // 3. Double indirect addressing
   single_indirect_index = (virtual_blocknum - (10 + entries_per_block)) / entries_per_block;
   data_index = (virtual_blocknum - (10 + entries_per_block)) % entries_per_block;
 
   // Allocate top-level double indirect table if missing
   if (inodes[handle].double_indirect == 0) {
-    inodes[handle].double_indirect = DfsAllocateBlock();
+    inodes[handle].double_indirect = DfsAllocateBlockInternal();
     if (inodes[handle].double_indirect == DFS_FAIL) {
-      DfsFreeBlock(new_block);
+      DfsFreeBlockInternal(new_block);
       return DFS_FAIL;
     }
     bzero(b.data, sb.fs_blocksize);
-    if (DfsWriteBlock(inodes[handle].double_indirect, & b) == DFS_FAIL) {
-      DfsFreeBlock(inodes[handle].double_indirect);
+    if (DfsWriteBlock(inodes[handle].double_indirect, &b) == DFS_FAIL) {
+      DfsFreeBlockInternal(inodes[handle].double_indirect);
       inodes[handle].double_indirect = 0;
-      DfsFreeBlock(new_block);
+      DfsFreeBlockInternal(new_block);
       return DFS_FAIL;
     }
     DfsMarkBlockMetadata(inodes[handle].double_indirect);
   }
 
-  // Read the top-level table
+  // Read the top level table
   if (DfsReadBlock(inodes[handle].double_indirect, &b) == DFS_FAIL) {
     return DFS_FAIL;
   }
   DfsMarkBlockMetadata(inodes[handle].double_indirect);
-  
+
   table = (int*)b.data;
   indirect_block = table[single_indirect_index];
 
   // Allocate mid-level single indirect table if missing
   if (indirect_block == 0) {
-    indirect_block = DfsAllocateBlock();
+    indirect_block = DfsAllocateBlockInternal();
     if (indirect_block == DFS_FAIL) {
-      DfsFreeBlock(new_block);
+      DfsFreeBlockInternal(new_block);
       return DFS_FAIL;
     }
 
-    // Write the new mid-level block number into the top-level table
+    // Write the new mid level block number into the top-level table
     table[single_indirect_index] = indirect_block;
     if (DfsWriteBlock(inodes[handle].double_indirect, &b) == DFS_FAIL) {
-      DfsFreeBlock(indirect_block);
-      DfsFreeBlock(new_block);
+      DfsFreeBlockInternal(indirect_block);
+      DfsFreeBlockInternal(new_block);
       return DFS_FAIL;
     }
     DfsMarkBlockMetadata(inodes[handle].double_indirect);
 
-
-    // Zero out the new mid-level block and write it to disk
+    // Zero out the new mid level block and write it to disk
     bzero(b.data, sb.fs_blocksize);
     if (DfsWriteBlock(indirect_block, &b) == DFS_FAIL) {
       return DFS_FAIL;
@@ -1294,31 +1344,52 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
     DfsMarkBlockMetadata(indirect_block);
   }
 
-  // Read the mid-level table, insert the new data block number, and write it back
+  // Read the mid level table, insert the new data block number and write it back
   if (DfsReadBlock(indirect_block, &b) == DFS_FAIL) {
     return DFS_FAIL;
   }
-  DfsMarkBlockMetadata(indirect_block);
 
   table = (int*)b.data;
   table[data_index] = new_block;
 
   if (DfsWriteBlock(indirect_block, &b) == DFS_FAIL) {
-    return DFS_FAIL;
+    return DFS_FAIL;    
   }
 
   DfsMarkBlockMetadata(indirect_block);
   return new_block;
 }
+//-----------------------------------------------------------------
+// DfsInodeAllocateVirtualBlock allocates a new filesystem block 
+// for the given inode, storing its blocknumber at index 
+// virtual_blocknumber in the translation table. If the 
+// virtual_blocknumber resides in the indirect address space, and 
+// there is not an allocated indirect addressing table, allocate it. 
+// Return DFS_FAIL on failure, and the newly allocated file system 
+// block number on success.
+//-----------------------------------------------------------------
+int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
+  int result;
+
+  // Check that the file system has been loaded and is valid.
+  if (sb.valid == 0 || handle >= (uint32)sb.num_inodes) {
+    return DFS_FAIL;
+  }   
+
+  LockHandleAcquire(dfs_lock);
+  result = DfsInodeAllocateVirtualBlockInternal(handle, virtual_blocknum);
+  LockHandleRelease(dfs_lock);
+
+  return result;
+}
 
 //-----------------------------------------------------------------
-// DfsInodeTranslateVirtualToFilesys translates the 
-// virtual_blocknum to the corresponding file system block using 
-// the inode identified by handle. Return DFS_FAIL on failure.
+// Internal helper for DfsInodeTranslateVirtualToFilesys
 //-----------------------------------------------------------------
-int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
+static int DfsInodeTranslateInternal(uint32 handle, uint32 virtual_blocknum)
+{
   dfs_block b;
-  int *table;
+  int* table;
   uint32 indirect_blocknum;
   uint32 single_indirect_index;
   uint32 data_index;
@@ -1326,10 +1397,9 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
   uint32 entries_per_block;
   uint32 max_vblocks;
 
-  // Check that the file system has been loaded and is valid.
-  if (sb.valid == 0 || handle >= (uint32)sb.num_inodes || inodes[handle].inuse == 0) {
+  if (inodes[handle].inuse == 0) {
     return DFS_FAIL;
-  }  
+  }
 
   entries_per_block = sb.fs_blocksize / sizeof(int);
   max_vblocks = 10 + entries_per_block + (entries_per_block * entries_per_block);
@@ -1347,10 +1417,10 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
     return block_result;
   }
 
-  // 2. Single indirect addressing 
+  // 2. Single indirect addressing
   if (virtual_blocknum < (10 + entries_per_block)) {
     if (inodes[handle].indirect == 0) {
-      return DFS_FAIL;  // Indirect table not allocated
+      return DFS_FAIL;
     }
 
     // Read the single indirect table block
@@ -1369,7 +1439,7 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
     return block_result;
   }
 
-  // 3. Double indirect addressing 
+  // 3. Double indirect addressing
   if (inodes[handle].double_indirect == 0) {
     return DFS_FAIL;
   }
@@ -1381,13 +1451,12 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
   DfsMarkBlockMetadata(inodes[handle].double_indirect);
 
   table = (int*)b.data;
-
   single_indirect_index = (virtual_blocknum - (10 + entries_per_block)) / entries_per_block;
   data_index = (virtual_blocknum - (10 + entries_per_block)) % entries_per_block;
 
   indirect_blocknum = table[single_indirect_index];
   if (indirect_blocknum == 0) {
-    return DFS_FAIL;  // Midlevel single indirect table not allocated
+    return DFS_FAIL;    // Midlevel single indirect table not allocated
   }
 
   // Read the midlevel single indirect table block
@@ -1403,6 +1472,26 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
     return DFS_FAIL;
   }
   return block_result;
+}
+
+//-----------------------------------------------------------------
+// DfsInodeTranslateVirtualToFilesys translates the 
+// virtual_blocknum to the corresponding file system block using 
+// the inode identified by handle. Return DFS_FAIL on failure.
+//-----------------------------------------------------------------
+int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
+  int result;
+
+  // Check that the file system has been loaded and is valid.
+  if (sb.valid == 0 || handle >= (uint32)sb.num_inodes) {
+    return DFS_FAIL;
+  }  
+
+  LockHandleAcquire(dfs_lock);
+  result = DfsInodeTranslateInternal(handle, virtual_blocknum);
+  LockHandleRelease(dfs_lock);
+
+  return result;
 }
 
 //-----------------------------------------------------------------

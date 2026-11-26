@@ -25,7 +25,7 @@ static lock_t cache_lock;
 
 // Adaptive clock with frequency aging cache structure
 #define FREQ_MAX 15
-#define TRANSITION_WINDOW 32
+#define TRANSITION_WINDOW 64
 #define AGING_INTERVAL 64
 
 typedef struct dfs_cache_slot {
@@ -468,7 +468,7 @@ static void RecordBlockAccessLocked(int blocknum, int is_hit, int slot) {
   is_distinct_transition = (blocknum != recent_blocks[0] && blocknum != recent_blocks[1]);
 
   if (blocknum != recent_blocks[0]) {
-    recent_blocks[i] = recent_blocks[0];
+    recent_blocks[1] = recent_blocks[0];
     recent_blocks[0] = blocknum;
   }
 
@@ -476,13 +476,13 @@ static void RecordBlockAccessLocked(int blocknum, int is_hit, int slot) {
     cache[slot].ref_bit = 1;
     // Always boost freq on genuine inter-block reuse or initial confirmation
     // cap at FREQ_MAX so stale blocks decay cleanly
-    if (is_distinct_transition || cache[slot].freq < 2) {
+    if (is_distinct_transition) {
       if (cache[slot].freq < FREQ_MAX) {
         cache[slot].freq++;
       }
     }
     // If the probation slot gets reused across distinct blocks, don't immediately evict
-    if (is_distinct_transition || slot == last_loaded_slot) {
+    if (is_distinct_transition && slot == last_loaded_slot) {
       last_loaded_slot = -1;
     }
   }
@@ -945,6 +945,13 @@ int DfsInodeDelete(uint32 handle) {
 
   entries_per_block = sb.fs_blocksize / sizeof(int);
 
+  if (inodes[handle].file_size == 0) {
+    max_vblocks = 0;
+  }
+  else {
+    max_vblocks = (inodes[handle].file_size + sb.fs_blocksize - 1) /sb.fs_blocksize;
+  }
+
   // 1. Free allocated data blocks
   for (i = 0; i < max_vblocks; i++) {
     phys_block = DfsInodeTranslateLocked(handle, (uint32)i);
@@ -964,7 +971,7 @@ int DfsInodeDelete(uint32 handle) {
     if (DfsReadBlock((uint32)inodes[handle].double_indirect, &b) != DFS_FAIL) {
       table = (int*)b.data;
       for (i = 0; i < (int)entries_per_block; i++) {
-        if (table[i != 0]) {
+        if (table[i] != 0) {
           DfsFreeBlock((uint32)table[i]);
         }
       }
@@ -995,14 +1002,14 @@ int DfsInodeRename(char* oldname, char* newname)
   int i;
 
   // Validate filesystem
-  if (sb.valid == 0 || oldname == NULL || newname || NULL) {
+  if (sb.valid == 0 || oldname == NULL || newname == NULL) {
     return DFS_FAIL;
   }
 
   LockHandleAcquire(inode_lock);
 
   // Ensure the new filename isn't already in use
-  if (DfsInodeFilenameExists(newname) != DFS_FAIL) {
+  if (DfsInodeFilenameExistsLocked(newname) != DFS_FAIL) {
     LockHandleRelease(inode_lock);
     return DFS_FAIL;
   }
@@ -1107,6 +1114,11 @@ static int DfsInodeTranslateLocked(uint32 handle, uint32 virtual_blocknum) {
   if (indirect_blocknum == 0) {
     return DFS_FAIL;
   }
+
+  if (DfsReadBlock(indirect_blocknum, &b) == DFS_FAIL) {
+    return DFS_FAIL;    
+  }
+
   table = (int*)b.data;
   block_result = table[data_index];
 
@@ -1144,7 +1156,7 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
 // Return DFS_FAIL on failure, and the newly allocated file system 
 // block number on success.
 //-----------------------------------------------------------------
-int DfsInodeAllocateVirtualBlockLocked(uint32 handle, uint32 virtual_blocknum) {
+static int DfsInodeAllocateVirtualBlockLocked(uint32 handle, uint32 virtual_blocknum) {
   dfs_block b;
   int* table;
   uint32 new_block;
@@ -1163,7 +1175,7 @@ int DfsInodeAllocateVirtualBlockLocked(uint32 handle, uint32 virtual_blocknum) {
   }
 
   // Check if the virtual block is already allocated
-  new_block = DfsInodeTranslateVirtualToFilesys(handle, virtual_blocknum);
+  new_block = DfsInodeTranslateLocked(handle, virtual_blocknum);
   if (new_block != DFS_FAIL) {
     return new_block;
   }
@@ -1320,6 +1332,7 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
 
   // Prevent reading past the actual file size
   if (start_byte >= inodes[handle].file_size) {
+    LockHandleRelease(inode_lock);
     return 0;     // EOF reached
   }
   if (start_byte + num_bytes > inodes[handle].file_size) {

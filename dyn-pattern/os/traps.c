@@ -19,6 +19,8 @@
 #include "ostests.h"
 #include "dfs_shared.h"
 
+
+#define TRAP_FILE_CHUNK_SIZE 512
 //----------------------------------------------------------------------
 // GracefulExit tries to first close the file system, then exit
 //----------------------------------------------------------------------
@@ -137,8 +139,10 @@ int TrapFileDeleteHandler(uint32 *trapArgs, int sysMode) {
 int TrapFileReadHandler(uint32 *trapArgs, int sysMode) {
   uint32 handle;
   char *user_mem;
-  char mem[FILE_MAX_READWRITE_BYTES];
+  char mem[TRAP_FILE_CHUNK_SIZE];
   int num_bytes;
+  int total_read = 0;
+  int chunk;
   int ret;
 
   // If we're not in system mode, we need to copy everything from the
@@ -158,32 +162,51 @@ int TrapFileReadHandler(uint32 *trapArgs, int sysMode) {
     num_bytes = trapArgs[2];
   }
  
-  if (num_bytes > FILE_MAX_READWRITE_BYTES) {
+  if (num_bytes < 0 || num_bytes > FILE_MAX_READWRITE_BYTES) {
     printf("TrapFileReadHandler: ERROR: you cannot read more than %d bytes at a time!\n", num_bytes);
     return FILE_FAIL;
   }
-  
-  if ((ret = FileRead(handle, mem, num_bytes)) == FILE_FAIL) {
-    return FILE_FAIL;
-  }
 
-  // Copy bytes that we just read into user mem
-  if (!sysMode) {
-    MemoryCopySystemToUser(currentPCB, mem, user_mem, num_bytes);
-  } else {
-    bcopy(mem, user_mem, num_bytes);
+  if (num_bytes == 0) {
+    return FileRead(handle, mem, 0);
   }
   
-  return ret;
+  while (total_read < num_bytes) {
+    chunk = num_bytes - total_read;
+    if (chunk > TRAP_FILE_CHUNK_SIZE) {
+      chunk = TRAP_FILE_CHUNK_SIZE;
+    }
+
+    ret = FileRead(handle, mem, chunk);
+    if (ret == FILE_FAIL) {
+      return (total_read > 0) ? total_read : FILE_FAIL;
+    }
+
+    if (ret > 0) {
+      if (!sysMode) {
+        MemoryCopySystemToUser(currentPCB, mem, user_mem + total_read, ret);
+      }
+      else {
+        bcopy(mem, user_mem + total_read, ret);
+      }
+      total_read += ret;
+    }
+    if (ret < chunk) {
+      break;
+    }
+  }
+  return total_read;
 }
 
 // file_write(uint32 handle, void *mem, int num_bytes)
 int TrapFileWriteHandler(uint32 *trapArgs, int sysMode) {
   uint32 handle;
   char *user_mem;
-  char mem[FILE_MAX_READWRITE_BYTES];
+  char mem[TRAP_FILE_CHUNK_SIZE];
   int num_bytes;
   int ret;
+  int total_written = 0;
+  int chunk;
 
   // If we're not in system mode, we need to copy everything from the
   // user-space virtual address to the kernel space address
@@ -195,29 +218,46 @@ int TrapFileWriteHandler(uint32 *trapArgs, int sysMode) {
     MemoryCopyUserToSystem (currentPCB, (trapArgs+1), &user_mem, sizeof(uint32));
     // Argument 2: integer number of bytes to write
     MemoryCopyUserToSystem (currentPCB, (trapArgs+2), &num_bytes, sizeof(uint32));
-    
-    // Now copy bytes from userland to kernel buffer for writing
-    if (num_bytes > FILE_MAX_READWRITE_BYTES) {
-      printf("TrapFileWriteHandler: ERROR: you cannot write more than %d bytes at a time!\n", num_bytes);
-      return FILE_FAIL;
-    }
-    MemoryCopyUserToSystem(currentPCB, user_mem, mem, num_bytes);
-  } else {
-    // Already in kernel space, no address translation necessary
+  }
+  else {
     handle = trapArgs[0];
-    user_mem = (char *)(trapArgs[1]);
+    user_mem = (char*)(trapArgs[1]);
     num_bytes = trapArgs[2];
-    if (num_bytes > FILE_MAX_READWRITE_BYTES) {
-      printf("TrapFileWriteHandler: ERROR: you cannot write more than %d bytes at a time!\n", num_bytes);
-      return FILE_FAIL;
-    }
-    bcopy(user_mem, mem, num_bytes);
   }
 
-  return FileWrite(handle, mem, num_bytes);
+  // Now copy bytes from userland to kernel buffer for writing
+  if (num_bytes < 0 || num_bytes > FILE_MAX_READWRITE_BYTES) {
+    printf("TrapFileWriteHandler: ERROR: you cannot write more than %d bytes at a time!\n", num_bytes);
+    return FILE_FAIL;
+  }
+  if (num_bytes == 0) {
+    return FileWrite(handle, mem, 0);
 
-  return ret;
+  }
 
+  while (total_written < num_bytes) {
+    chunk = num_bytes - total_written;
+    if (chunk > TRAP_FILE_CHUNK_SIZE) {
+      chunk = TRAP_FILE_CHUNK_SIZE;
+    }
+
+    if (!sysMode) {
+      MemoryCopyUserToSystem(currentPCB, user_mem, mem, num_bytes);
+    }
+    else {
+      bcopy(user_mem + total_written, mem, chunk);
+    }
+
+    ret = FileWrite(handle, mem, chunk);
+    if (ret == FILE_FAIL) {
+      return (total_written > 0) ? total_written : FILE_FAIL;
+    }
+    total_written += ret;
+    if (ret < chunk) {
+      break;
+    }
+  }
+  return total_written;
 }
 
 // file_seek(uint32 handle, int num_bytes, int from_where)

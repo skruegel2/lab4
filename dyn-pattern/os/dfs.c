@@ -1015,7 +1015,7 @@ int DfsInodeRename(char* oldname, char* newname)
   }
 
   // Find the existing file
-  handle = DfsInodeFilenameExists(oldname);
+  handle = DfsInodeFilenameExistsLocked(oldname);
   if (handle == DFS_FAIL) {
     LockHandleRelease(inode_lock);
     return DFS_FAIL;

@@ -242,7 +242,7 @@ int TrapFileWriteHandler(uint32 *trapArgs, int sysMode) {
     }
 
     if (!sysMode) {
-      MemoryCopyUserToSystem(currentPCB, user_mem, mem, num_bytes);
+      MemoryCopyUserToSystem(currentPCB, user_mem + total_written, mem, chunk);
     }
     else {
       bcopy(user_mem + total_written, mem, chunk);

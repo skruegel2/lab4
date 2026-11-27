@@ -18,10 +18,18 @@ static inline uint32 invert(uint32 n) { return n ^ negativeone; }
 // additional locks if it is really necessary.
 
 // Strict lock hierarchy:
-// files_lock (files.c) -> indode_lock -> fbv_lock -> cache_lock
+// files_lock (files.c) -> indode_lock -> fbv_lock -> cache_lock -> uncached_lock
 static lock_t inode_lock;
 static lock_t fbv_lock;
 static lock_t cache_lock;
+static lock_t uncached_lock;
+
+// Static scratch buffers to keep 512B/1024/B blocks off the kernel stack
+static disk_block meta_phys_buf;
+static disk_block cache_phys_buf;
+static dfs_block inode_io_buf;
+static dfs_block inode_alloc_buf;
+static dfs_block inode_trans_buf;
 
 // Adaptive clock with frequency aging cache structure
 #define FREQ_MAX 15
@@ -81,6 +89,7 @@ void DfsModuleInit() {
   inode_lock = LockCreate();
   fbv_lock = LockCreate();
   cache_lock = LockCreate();
+  uncached_lock = LockCreate();
 
   // Reset telemetry counters
   cache_hits = 0.0;
@@ -134,7 +143,6 @@ void DfsInvalidate() {
 // failure.
 //-------------------------------------------------------------------
 int DfsOpenFileSystem() {
-  disk_block b;
   int i;
   uint32 phys_block_ratio;
   uint32 phys_block_start;
@@ -155,13 +163,13 @@ int DfsOpenFileSystem() {
   // until we read the superblock, either.
 
   // Read superblock from disk
-  if (DiskReadBlock(1, &b) == DISK_FAIL)
+  if (DiskReadBlock(1, &meta_phys_buf) == DISK_FAIL)
   {
     return DFS_FAIL;
   }
 
   // Copy the data from the block we just read into the superblock in memory
-  bcopy(b.data, (char*)&sb, sizeof(dfs_superblock));
+  bcopy(meta_phys_buf.data, (char*)&sb, sizeof(dfs_superblock));
 
   if (sb.valid == 0 || sb.fs_blocksize <= 0) {
     sb.valid = 0;
@@ -180,11 +188,11 @@ int DfsOpenFileSystem() {
   inode_phys_blocks = (sb.num_inodes * sizeof(dfs_inode)) / DiskBytesPerBlock();
 
   for (i = 0; i < inode_phys_blocks; i++) {
-    if (DiskReadBlock(phys_block_start + i, &b) == DISK_FAIL) {
+    if (DiskReadBlock(phys_block_start + i, &meta_phys_buf) == DISK_FAIL) {
       sb.valid = 0;
       return DFS_FAIL;
     }
-    bcopy(b.data, inode_ptr + (i * DiskBytesPerBlock()), DiskBytesPerBlock());
+    bcopy(meta_phys_buf.data, inode_ptr + (i * DiskBytesPerBlock()), DiskBytesPerBlock());
   }
 
   // Read free block vector
@@ -195,23 +203,23 @@ int DfsOpenFileSystem() {
 
   for (i = 0; i < fbv_phys_blocks; i++)
   {
-    if (DiskReadBlock(phys_block_start + i, &b) == DISK_FAIL) {
+    if (DiskReadBlock(phys_block_start + i, &meta_phys_buf) == DISK_FAIL) {
       sb.valid = 0;
       return DFS_FAIL;
     }
-    bcopy(b.data, fbv_ptr + (i * DiskBytesPerBlock()), DiskBytesPerBlock());
+    bcopy(meta_phys_buf.data, fbv_ptr + (i * DiskBytesPerBlock()), DiskBytesPerBlock());
   }
 
   // Change superblock to be invalid, write back to disk
   sb.valid = 0;
-  bzero(b.data, DiskBytesPerBlock());
-  bcopy((char*)&sb, b.data, sizeof(dfs_superblock));
+  bzero(meta_phys_buf.data, DiskBytesPerBlock());
+  bcopy((char*)&sb, meta_phys_buf.data, sizeof(dfs_superblock));
 
   // Write it to primary physical block 1
-  DiskWriteBlock(1, &b);
+  DiskWriteBlock(1, &meta_phys_buf);
 
   // Write to duplicate superblock 
-  DiskWriteBlock(((sb.total_fs_blocks - 1) * phys_block_ratio) + 1, &b);
+  DiskWriteBlock(((sb.total_fs_blocks - 1) * phys_block_ratio) + 1, &meta_phys_buf);
 
   // Change it back to be valid in memory
   sb.valid = 1;
@@ -225,7 +233,6 @@ int DfsOpenFileSystem() {
 // version.
 //-------------------------------------------------------------------
 int DfsCloseFileSystem() {
-  disk_block b;
   int i;
   uint32 phys_block_ratio;
   uint32 phys_block_start;
@@ -252,8 +259,8 @@ int DfsCloseFileSystem() {
 
   for(i = 0; i < inode_phys_blocks; i++)
   {
-    bcopy(inode_ptr + (i * DiskBytesPerBlock()), b.data, DiskBytesPerBlock());
-    if (DiskWriteBlock(phys_block_start + i, &b) == DISK_FAIL) {
+    bcopy(inode_ptr + (i * DiskBytesPerBlock()), meta_phys_buf.data, DiskBytesPerBlock());
+    if (DiskWriteBlock(phys_block_start + i, &meta_phys_buf) == DISK_FAIL) {
       return DFS_FAIL;
     }
   }
@@ -264,22 +271,22 @@ int DfsCloseFileSystem() {
   fbv_phys_blocks = (sb.total_fs_blocks / 8) / DiskBytesPerBlock();
 
   for(i = 0; i < fbv_phys_blocks; i++) {
-    bcopy(fbv_ptr + (i * DiskBytesPerBlock()), b.data, DiskBytesPerBlock());
-    if (DiskWriteBlock(phys_block_start + i, &b) == DISK_FAIL) {
+    bcopy(fbv_ptr + (i * DiskBytesPerBlock()), meta_phys_buf.data, DiskBytesPerBlock());
+    if (DiskWriteBlock(phys_block_start + i, &meta_phys_buf) == DISK_FAIL) {
       return DFS_FAIL;
     }
   }
 
   // Set memory copy to valid and write valid superblock to disk
   sb.valid = 1;
-  bzero(b.data, DiskBytesPerBlock());
-  bcopy((char*)&sb, b.data, sizeof(dfs_superblock));
+  bzero(meta_phys_buf.data, DiskBytesPerBlock());
+  bcopy((char*)&sb, meta_phys_buf.data, sizeof(dfs_superblock));
 
   // Write to primary physical block 1
-  DiskWriteBlock(1, &b);
+  DiskWriteBlock(1, &meta_phys_buf);
 
   // Write to duplicate superblock 
-  DiskWriteBlock(((sb.total_fs_blocks - 1) * phys_block_ratio) + 1, &b);
+  DiskWriteBlock(((sb.total_fs_blocks - 1) * phys_block_ratio) + 1, &meta_phys_buf);
 
   // Invalidate memory copy after successful flush
   sb.valid = 0;
@@ -396,7 +403,6 @@ int DfsFreeBlock(uint32 blocknum) {
 // the physical disk and increments disk_reads per physical block.
 //-----------------------------------------------------------------
 int DfsReadBlockUncached(uint32 blocknum, dfs_block *b) {
-  disk_block phys_b;
   uint32 phys_block_ratio;
   uint32 phys_block_start;
   int i;
@@ -410,16 +416,18 @@ int DfsReadBlockUncached(uint32 blocknum, dfs_block *b) {
   phys_block_ratio = sb.fs_blocksize / DiskBytesPerBlock();
   phys_block_start = blocknum * phys_block_ratio;  
 
+  LockHandleAcquire(uncached_lock);
   // Read each physical block and copy its payload into the correct offset of the DFS block
   for (i = 0; i < phys_block_ratio; i++)
   {
-    if (DiskReadBlock(phys_block_start + i, &phys_b) == DISK_FAIL) {
+    if (DiskReadBlock(phys_block_start + i, &cache_phys_buf) == DISK_FAIL) {
+      LockHandleRelease(uncached_lock);
       return DFS_FAIL;
     }
     disk_reads++;
-    bcopy(phys_b.data, b->data + (i * DiskBytesPerBlock()), DiskBytesPerBlock());
+    bcopy(cache_phys_buf.data, b->data + (i * DiskBytesPerBlock()), DiskBytesPerBlock());
   }
-
+  LockHandleRelease(uncached_lock);
   // Return the total number of bytes read (which is one full DFS block)
   return sb.fs_blocksize;
 }
@@ -429,7 +437,6 @@ int DfsReadBlockUncached(uint32 blocknum, dfs_block *b) {
 // the physical disk and increments disk_writes per physical block.
 //-----------------------------------------------------------------
 int DfsWriteBlockUncached(uint32 blocknum, dfs_block *b){
-  disk_block phys_b;
   uint32 phys_block_ratio;
   uint32 phys_block_start;
   int i;
@@ -442,16 +449,18 @@ int DfsWriteBlockUncached(uint32 blocknum, dfs_block *b){
   phys_block_ratio = sb.fs_blocksize / DiskBytesPerBlock();
   phys_block_start = blocknum * phys_block_ratio;
 
+  LockHandleAcquire(uncached_lock);
   // Chunk the DFS block data into physical blocks and write them to the disk
   for (i = 0; i < phys_block_ratio; i++) {
-    bcopy(b->data + (i * DiskBytesPerBlock()), phys_b.data, DiskBytesPerBlock());
+    bcopy(b->data + (i * DiskBytesPerBlock()), cache_phys_buf.data, DiskBytesPerBlock());
 
-    if (DiskWriteBlock(phys_block_start +i, &phys_b) == DISK_FAIL) {
+    if (DiskWriteBlock(phys_block_start +i, &cache_phys_buf) == DISK_FAIL) {
+      LockHandleRelease(uncached_lock);
       return DFS_FAIL;
     }
     disk_writes++;
   }
-
+  LockHandleRelease(uncached_lock);
   return sb.fs_blocksize;
 }
 
@@ -943,7 +952,6 @@ int DfsInodeDelete(uint32 handle) {
   int i;
   int max_vblocks;
   uint32 phys_block;
-  dfs_block b;
   int *table;
   uint32 entries_per_block;
 
@@ -985,8 +993,8 @@ int DfsInodeDelete(uint32 handle) {
 
   // 3. Free double indirect mid-level and top-level blocks
   if (inodes[handle].double_indirect != 0) {
-    if (DfsReadBlock((uint32)inodes[handle].double_indirect, &b) != DFS_FAIL) {
-      table = (int*)b.data;
+    if (DfsReadBlock((uint32)inodes[handle].double_indirect, &inode_io_buf) != DFS_FAIL) {
+      table = (int*)inode_io_buf.data;
       for (i = 0; i < (int)entries_per_block; i++) {
         if (table[i] != 0) {
           DfsFreeBlock((uint32)table[i]);
@@ -1080,7 +1088,6 @@ int DfsInodeFilesize(uint32 handle) {
 // Internal unlocked helper
 //-----------------------------------------------------------------
 static int DfsInodeTranslateLocked(uint32 handle, uint32 virtual_blocknum) {
-  dfs_block b;
   int *table;
   uint32 indirect_blocknum;
   uint32 single_indirect_index;
@@ -1107,10 +1114,10 @@ static int DfsInodeTranslateLocked(uint32 handle, uint32 virtual_blocknum) {
     if (inodes[handle].indirect == 0) {
       return DFS_FAIL;
     }
-    if (DfsReadBlock((uint32)inodes[handle].indirect, &b) == DFS_FAIL) {
+    if (DfsReadBlock((uint32)inodes[handle].indirect, &inode_trans_buf) == DFS_FAIL) {
       return DFS_FAIL;
     }
-    table = (int*)b.data;
+    table = (int*)inode_trans_buf.data;
     block_result = table[virtual_blocknum - 10];
     return (block_result == 0) ? DFS_FAIL : block_result;
   }
@@ -1119,11 +1126,11 @@ static int DfsInodeTranslateLocked(uint32 handle, uint32 virtual_blocknum) {
   if (inodes[handle].double_indirect == 0) {
     return DFS_FAIL;    
   }
-  if (DfsReadBlock((uint32)inodes[handle].double_indirect, &b) == DFS_FAIL) {
+  if (DfsReadBlock((uint32)inodes[handle].double_indirect, &inode_trans_buf) == DFS_FAIL) {
     return DFS_FAIL;
   }
 
-  table = (int*)b.data;
+  table = (int*)inode_trans_buf.data;
   single_indirect_index = (virtual_blocknum - (10 + entries_per_block)) / entries_per_block;
   data_index = (virtual_blocknum - (10 + entries_per_block)) % entries_per_block;
 
@@ -1132,11 +1139,11 @@ static int DfsInodeTranslateLocked(uint32 handle, uint32 virtual_blocknum) {
     return DFS_FAIL;
   }
 
-  if (DfsReadBlock(indirect_blocknum, &b) == DFS_FAIL) {
+  if (DfsReadBlock(indirect_blocknum, &inode_trans_buf) == DFS_FAIL) {
     return DFS_FAIL;    
   }
 
-  table = (int*)b.data;
+  table = (int*)inode_trans_buf.data;
   block_result = table[data_index];
 
   return (block_result == 0) ? DFS_FAIL : block_result;
@@ -1174,7 +1181,6 @@ int DfsInodeTranslateVirtualToFilesys(uint32 handle, uint32 virtual_blocknum) {
 // block number on success.
 //-----------------------------------------------------------------
 static int DfsInodeAllocateVirtualBlockLocked(uint32 handle, uint32 virtual_blocknum) {
-  dfs_block b;
   int* table;
   uint32 new_block;
   uint32 indirect_block;
@@ -1220,21 +1226,21 @@ static int DfsInodeAllocateVirtualBlockLocked(uint32 handle, uint32 virtual_bloc
         return DFS_FAIL;
       }
       // Zero out the newly created indirect block
-      bzero(b.data, sb.fs_blocksize);
-      if (DfsWriteBlock(inodes[handle].indirect, &b) == DFS_FAIL) {
+      bzero(inode_alloc_buf.data, sb.fs_blocksize);
+      if (DfsWriteBlock(inodes[handle].indirect, &inode_alloc_buf) == DFS_FAIL) {
         return DFS_FAIL;
       }
     }
 
     // Read the indirect block, update the table, and write it back
-    if (DfsReadBlock(inodes[handle].indirect, &b) == DFS_FAIL) {
+    if (DfsReadBlock(inodes[handle].indirect, &inode_alloc_buf) == DFS_FAIL) {
       return DFS_FAIL;
     }
 
-    table = (int*)b.data;
+    table = (int*)inode_alloc_buf.data;
     table[virtual_blocknum - 10] = new_block;
 
-    if (DfsWriteBlock(inodes[handle].indirect, &b) == DFS_FAIL) {
+    if (DfsWriteBlock(inodes[handle].indirect, &inode_alloc_buf) == DFS_FAIL) {
       return DFS_FAIL;
     }
     return new_block;
@@ -1252,17 +1258,17 @@ static int DfsInodeAllocateVirtualBlockLocked(uint32 handle, uint32 virtual_bloc
       DfsFreeBlock(new_block);
       return DFS_FAIL;
     }
-    bzero(b.data, sb.fs_blocksize);
-    if (DfsWriteBlock(inodes[handle].double_indirect, & b) == DFS_FAIL) {
+    bzero(inode_alloc_buf.data, sb.fs_blocksize);
+    if (DfsWriteBlock(inodes[handle].double_indirect, &inode_alloc_buf) == DFS_FAIL) {
       return DFS_FAIL;
     }
   }
 
   // Read the top-level table
-  if (DfsReadBlock(inodes[handle].double_indirect, &b) == DFS_FAIL) {
+  if (DfsReadBlock(inodes[handle].double_indirect, &inode_alloc_buf) == DFS_FAIL) {
     return DFS_FAIL;
   }
-  table = (int*)b.data;
+  table = (int*)inode_alloc_buf.data;
   indirect_block = table[single_indirect_index];
 
   // Allocate mid-level single indirect table if missing
@@ -1275,25 +1281,25 @@ static int DfsInodeAllocateVirtualBlockLocked(uint32 handle, uint32 virtual_bloc
 
     // Write the new mid-level block number into the top-level table
     table[single_indirect_index] = indirect_block;
-    if (DfsWriteBlock(inodes[handle].double_indirect, &b) == DFS_FAIL) {
+    if (DfsWriteBlock(inodes[handle].double_indirect, &inode_alloc_buf) == DFS_FAIL) {
       return DFS_FAIL;
     }
 
     // Zero out the new mid-level block and write it to disk
-    bzero(b.data, sb.fs_blocksize);
-    if (DfsWriteBlock(indirect_block, &b) == DFS_FAIL) {
+    bzero(inode_alloc_buf.data, sb.fs_blocksize);
+    if (DfsWriteBlock(indirect_block, &inode_alloc_buf) == DFS_FAIL) {
       return DFS_FAIL;
     }
   }
 
   // Read the mid-level table, insert the new data block number, and write it back
-  if (DfsReadBlock(indirect_block, &b) == DFS_FAIL) {
+  if (DfsReadBlock(indirect_block, &inode_alloc_buf) == DFS_FAIL) {
     return DFS_FAIL;
   }
-  table = (int*)b.data;
+  table = (int*)inode_alloc_buf.data;
   table[data_index] = new_block;
 
-  if (DfsWriteBlock(indirect_block, &b) == DFS_FAIL) {
+  if (DfsWriteBlock(indirect_block, &inode_alloc_buf) == DFS_FAIL) {
     return DFS_FAIL;
   }
   return new_block;
@@ -1327,7 +1333,6 @@ int DfsInodeAllocateVirtualBlock(uint32 handle, uint32 virtual_blocknum) {
 // failure, and the number of bytes read on success.
 //-----------------------------------------------------------------
 int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
-  dfs_block b;
   uint32 virtual_block;
   uint32 offset;
   uint32 physical_block;
@@ -1371,12 +1376,12 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
       LockHandleRelease(inode_lock);
       return DFS_FAIL;  // Should not happen if file_size is correct
     }
-    if (DfsReadBlock(physical_block, &b) == DFS_FAIL) {
+    if (DfsReadBlock(physical_block, &inode_io_buf) == DFS_FAIL) {
       LockHandleRelease(inode_lock);
       return DFS_FAIL;
     }
 
-    bcopy(b.data + offset, dest + bytes_read, bytes_to_read);
+    bcopy(inode_io_buf.data + offset, dest + bytes_read, bytes_to_read);
     bytes_read += bytes_to_read;
     start_byte += bytes_to_read;
     num_bytes -= bytes_to_read;
@@ -1395,7 +1400,6 @@ int DfsInodeReadBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
 //-----------------------------------------------------------------
 
 int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) {
-  dfs_block b;
   uint32 virtual_block;
   uint32 offset;
   uint32 physical_block;
@@ -1440,20 +1444,20 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
       // If the block is brand new (indicated by the write extending file_size past block bounds),
       // there's no need to read.  But if modifying exising data, read it in.
       if (was_allocated) {
-        if (DfsReadBlock(physical_block, &b) == DFS_FAIL) {
+        if (DfsReadBlock(physical_block, &inode_io_buf) == DFS_FAIL) {
           LockHandleRelease(inode_lock);
           return DFS_FAIL;
         }
       }
       else {
         // New partial block: zero it to avoid garbage data
-        bzero(b.data, sb.fs_blocksize);
+        bzero(inode_io_buf.data, sb.fs_blocksize);
       }
     }
 
-    bcopy(src + bytes_written, b.data + offset, bytes_to_write);
+    bcopy(src + bytes_written, inode_io_buf.data + offset, bytes_to_write);
 
-    if (DfsWriteBlock(physical_block, &b) == DFS_FAIL) {
+    if (DfsWriteBlock(physical_block, &inode_io_buf) == DFS_FAIL) {
       LockHandleRelease(inode_lock);
       return DFS_FAIL;
     }

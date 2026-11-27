@@ -64,7 +64,7 @@ static void RecordBlockAccessLocked(int blocknum, int is_hit, int slot);
 static int SelectVictimSlotLocked();
 static int DfsInodeFilenameExistsLocked(char* filename);
 static int DfsInodeTranslateLocked(uint32 handle, uint32 virtual_blocknum);
-static int DfsInodeAllocateBlockLocked(uint32 handle, uint32 virtual_blocknum);
+static int DfsInodeAllocateVirtualBlockLocked(uint32 handle, uint32 virtual_blocknum);
 
 ///////////////////////////////////////////////////////////////////
 // Non-inode functions first
@@ -1422,7 +1422,7 @@ int DfsInodeWriteBytes(uint32 handle, void *mem, int start_byte, int num_bytes) 
     if (bytes_to_write < sb.fs_blocksize) {
       // If the block is brand new (indicated by the write extending file_size past block bounds),
       // there's no need to read.  But if modifying exising data, read it in.
-      if (was_allocated && start_byte < inodes[handle].file_size) {
+      if (was_allocated) {
         if (DfsReadBlock(physical_block, &b) == DFS_FAIL) {
           LockHandleRelease(inode_lock);
           return DFS_FAIL;

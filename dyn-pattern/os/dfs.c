@@ -675,7 +675,7 @@ int DfsReadBlock(uint32 blocknum, dfs_block *b) {
   slot = DfsCacheHitInternal(blocknum);
   if (slot != DFS_FAIL) {
     dbprintf('b', "Cache Hit: Block %d found in slot %d (Hits=%d, Misses=%d)\n",
-        blocknum, slot, cache_hits, cache_misses);
+        blocknum, slot, (int)cache_hits, (int)cache_misses);
     cache_hits += 1.0;  
     RecordBlockAccessLocked((int)blocknum, 1, slot);
   }
@@ -795,9 +795,26 @@ static void PrintCacheMissStats() {
   uint32 hit_scaled;
   uint32 miss_scaled;
 
+  static int print_count = 0;
+  print_count++;
   if (total <= 0.0) {
     return;
   }
+  // if ((print_count % 1000) == 0)
+  // {
+  //   print_count = 0;
+  //   // Compute percentages scaled by 1000
+  //   hit_scaled = (uint32)((((double)cache_hits * 100000.0) / total) + 0.5);
+  //   if (hit_scaled > 100000) {
+  //     hit_scaled = 100000;
+  //   }
+  //   miss_scaled = 100000 - hit_scaled;
+
+  //   printf("Cache Miss: Hit Rate = %d.%03d%%, Miss Rate = %d.%03d%%, Disk Reads = %d, Disk Writes = %d\n",
+  //           hit_scaled / 1000, hit_scaled % 1000,
+  //           miss_scaled / 1000, miss_scaled % 1000,
+  //           disk_reads, disk_writes);
+  // }
 
   // Compute percentages scaled by 1000
   hit_scaled = (uint32)((((double)cache_hits * 100000.0) / total) + 0.5);

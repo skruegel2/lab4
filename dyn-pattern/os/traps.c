@@ -811,8 +811,8 @@ dointerrupt (unsigned int cause, unsigned int iar, unsigned int isr,
       break;
 
     default:
-      printf ("Got an unrecognized trap (0x%x) - exiting!\n",
-	      cause);
+      printf ("Got an unrecognized trap (0x%x) at IAR=0x%x exiting!\n",
+	      cause, currentPCB ? currentPCB->currentSavedFrame[PROCESS_STACK_IAR] : 0);
       GracefulExit ();
       break;
     }
@@ -855,8 +855,8 @@ dointerrupt (unsigned int cause, unsigned int iar, unsigned int isr,
       GracefulExit ();
       break;
     default:
-      printf ("Got an unrecognized system interrupt (0x%x) - exiting!\n",
-	      cause);
+      printf ("Got an unrecognized system interrupt (0x%x) at IAR=0x%x exiting!\n",
+	      cause, currentPCB ? currentPCB->currentSavedFrame[PROCESS_STACK_IAR] : 0);
       GracefulExit ();
       break;
     }

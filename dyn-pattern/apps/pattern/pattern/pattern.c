@@ -26,7 +26,13 @@
 static unsigned int lcg_seed = 1;
 
 int get_num(int max_val) {
-  lcg_seed = (lcg_seed * 1103515245 + 12345) & 0x7FFFFFFF;
+  unsigned int t = lcg_seed * 1103515245U;
+  if ((t & 0x7FFFFFFFU) > (0x7FFFFFFFU - 12345U)) {
+    lcg_seed = ((t & 0x7FFFFFFFU) - (0x80000000U - 12345U)) & 0x7FFFFFFFU;
+  }
+  else {
+    lcg_seed = ((t & 0x7FFFFFFFU) + 12345U) & 0x7FFFFFFF;
+  }
   if (max_val == 0) return 0;
   return (int)lcg_seed % max_val;
 }

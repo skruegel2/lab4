@@ -17,7 +17,9 @@ static inline uint32 invert(uint32 n) { return n ^ negativeone; }
 // You have already been told about the most likely places where you should use locks. You may use 
 // additional locks if it is really necessary.
 
-static lock_t dfs_lock;
+static lock_t inode_lock;
+static lock_t fbv_lock;
+static lock_t cache_lock;
 
 // STUDENT: put your file system level functions below.
 // Some skeletons are provided. You can implement additional functions.
@@ -35,7 +37,9 @@ void DfsModuleInit() {
 // You essentially set the file system as invalid and then open 
 // using DfsOpenFileSystem().
   // Initialize the lock to protect the free block vector and inodes
-  dfs_lock = LockCreate();
+  inode_lock = LockCreate();
+  fbv_lock = LockCreate();
+  cache_lock = LockCreate();
 
   // Set file system as invalid, then open
   DfsInvalidate();
@@ -230,7 +234,7 @@ int DfsAllocateBlock() {
   total_fbv_ints = sb.total_fs_blocks / 32;
 
   // Acquire lock before reading the shared fbv
-  LockHandleAcquire(dfs_lock);
+  LockHandleAcquire(fbv_lock);
 
   for (i = 0; i < total_fbv_ints; i++) {
     // If the integer is not completely full of 1s
@@ -253,7 +257,7 @@ int DfsAllocateBlock() {
   }
 
   // Release the lock after modifying
-  LockHandleRelease(dfs_lock);
+  LockHandleRelease(fbv_lock);
 
   // Return handle or DFS_FAIL
   return blocknum;
@@ -287,13 +291,13 @@ int DfsFreeBlock(uint32 blocknum) {
   mask = invert(1 << bit_index);
 
   // Acquire lock before modifying fbv
-  LockHandleAcquire(dfs_lock);
+  LockHandleAcquire(fbv_lock);
 
   // Use bitwise AND to clear the specific bit to 0 (free)
   fbv[array_index] &= mask;
 
   // Release lock
-  LockHandleRelease(dfs_lock);
+  LockHandleRelease(fbv_lock);
 
   return DFS_SUCCESS;
 }
@@ -425,7 +429,7 @@ int DfsInodeOpen(char *filename) {
   handle = DFS_FAIL;
 
   // Acquire lock before modifying shared inodes array
-  LockHandleAcquire(dfs_lock);
+  LockHandleAcquire(inode_lock);
 
   for(i = 0; i < sb.num_inodes; i++) {
     if (inodes[i].inuse == 0) {
@@ -456,7 +460,7 @@ int DfsInodeOpen(char *filename) {
     }
   }
   // Release the lock
-  LockHandleRelease(dfs_lock);
+  LockHandleRelease(inode_lock);
   
   return handle;
 }
@@ -525,12 +529,12 @@ int DfsInodeDelete(uint32 handle) {
   }
 
   // 5. Mark the inodes as free
-  LockHandleAcquire(dfs_lock);
+  LockHandleAcquire(inode_lock);
   inodes[handle].file_size = 0;
   inodes[handle].indirect = 0;
   inodes[handle].double_indirect = 0;
   inodes[handle].inuse = 0;
-  LockHandleRelease(dfs_lock);
+  LockHandleRelease(inode_lock);
 
   return DFS_SUCCESS;
 }
@@ -561,7 +565,7 @@ int DfsInodeRename(char* oldname, char* newname)
   }
 
   // Acquire lock to safely modify the inode data
-  LockHandleAcquire(dfs_lock);
+  LockHandleAcquire(inode_lock);
 
   for(i = 0; i < FILE_MAX_FILENAME_LENGTH; i++) {
     inodes[handle].filename[i] = newname[i];
@@ -573,7 +577,7 @@ int DfsInodeRename(char* oldname, char* newname)
   // Guarantee null termination
   inodes[handle].filename[FILE_MAX_FILENAME_LENGTH - 1] = '\0';
 
-  LockHandleRelease(dfs_lock);
+  LockHandleRelease(inode_lock);
 
   return DFS_SUCCESS;
 }
